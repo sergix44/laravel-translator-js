@@ -1,0 +1,28 @@
+{
+  "name": "laravel-translator",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Laravel localization bridge for your frontend.",
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sergix44/laravel-translator-js.git"
+  },
+  "author": "Sergio Brighenti",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sergix44/laravel-translator-js/issues"
+  },
+  "homepage": "https://github.com/sergix44/laravel-translator-js#readme",
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "glob": "^10.3.10",
+    "php-parser": "^3.1.5",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vitest": "^0.34.6"
+  }
+}
