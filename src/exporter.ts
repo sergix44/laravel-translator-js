@@ -7,7 +7,7 @@ interface CandidateTranslation {
     type: 'php' | 'json'
     basePath: string
     path: string
-    name: string
+    name: string | null
     nesting: string[]
     locale: string
 }
@@ -53,7 +53,11 @@ export const exportTranslations = (...paths: string[]) => {
             current = current[nest]
         })
 
-        current[candidate.name] = content
+        if (candidate.name) {
+            current[candidate.name] = content
+        } else {
+            translations[candidate.locale][candidate.type] = {...current, ...content}
+        }
     })
 
     return translations
@@ -62,7 +66,7 @@ export const exportTranslations = (...paths: string[]) => {
 const getTranslationCandidates = (pattern: string, path: string, type: 'php' | 'json'): CandidateTranslation[] => {
     return glob.sync(pattern, {cwd: path}).map((transPath) => {
         const withoutExtension = transPath.split('.').shift()
-        const name = basename(withoutExtension).toLocaleLowerCase()
+        const name = type === 'php' ? basename(withoutExtension).toLocaleLowerCase() : null
         const locale = withoutExtension.split(sep).shift().toLocaleLowerCase()
         const nesting = withoutExtension.split(sep).slice(1, -1)
         return {

@@ -30,16 +30,15 @@ test('exports complex locale', async () => {
                     }, "nested": {"cars": {"car": {"is_electric": "É elétrico?", "foo": {"level1": {"level2": "barpt"}}}}}
                 },
                 "json": {
-                    "pt": {
-                        "Welcome!": "Bem-vindo!",
-                        "Welcome, :name!": "Bem-vindo, :name!",
-                        "hi :name, hi :name": "olá :name, olá :name",
-                        "{1} :count minute ago|[2,*] :count minutes ago": "{1} há :count minuto|[2,*] há :count minutos",
-                        "foo.bar": "baz",
-                        "Start/end": "Início/Fim",
-                        "Get started.": "Comece.",
-                        "<div>Welcome</div>": "<div>Bem-vindo</div>"
-                    }
+                    "Welcome!": "Bem-vindo!",
+                    "Welcome, :name!": "Bem-vindo, :name!",
+                    "hi :name, hi :name": "olá :name, olá :name",
+                    "{1} :count minute ago|[2,*] :count minutes ago": "{1} há :count minuto|[2,*] há :count minutos",
+                    "foo.bar": "baz",
+                    "Start/end": "Início/Fim",
+                    "Get started.": "Comece.",
+                    "<div>Welcome</div>": "<div>Bem-vindo</div>"
+
                 }
             },
             "fr": {"php": {"auth": {"failed": "Ces identifiants ne correspondent pas à nos enregistrements."}}},
@@ -68,20 +67,19 @@ test('exports complex locale', async () => {
                     }
                 },
                 "json": {
-                    "en": {
-                        "Welcome!": "Wecome!",
-                        "Welcome, :name!": "Welcome, :name!",
-                        "Only Available on EN": "Only Available on EN",
-                        "{1} :count minute ago|[2,*] :count minutes ago": "{1} :count minute ago|[2,*] :count minutes ago",
-                        "Start/end": "Start/End",
-                        "Get started.": "Get started.",
-                        "English only.": "English only."
-                    }
+                    "Welcome!": "Wecome!",
+                    "Welcome, :name!": "Welcome, :name!",
+                    "Only Available on EN": "Only Available on EN",
+                    "{1} :count minute ago|[2,*] :count minutes ago": "{1} :count minute ago|[2,*] :count minutes ago",
+                    "Start/end": "Start/End",
+                    "Get started.": "Get started.",
+                    "English only.": "English only."
+
                 }
             },
-            "zh_tw": {"json": {"zh_tw": {"Welcome!": "歡迎"}}},
-            "es": {"json": {"es": {"Welcome!": "Bienvenido!"}}},
-            "de": {"json": {"de": {"auth.arr.0": "foo", "auth.arr.1": "bar"}}}
+            "zh_tw": {"json": {"Welcome!": "歡迎"}},
+            "es": {"json": {"Welcome!": "Bienvenido!"}},
+            "de": {"json": {"auth.arr.0": "foo", "auth.arr.1": "bar"}}
         }
     )
 })

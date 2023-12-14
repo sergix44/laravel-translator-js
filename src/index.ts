@@ -13,13 +13,16 @@ const isServer = typeof window === 'undefined'
 
 const defaultConfig: Config = {
     locale: !isServer && document.documentElement.lang ? document.documentElement.lang.replace('-', '_') : 'en',
-    fallbackLocale: !isServer && window ? window?.fallbackLocale : null,
+    fallbackLocale: !isServer && window ? window?.fallbackLocale.replace('-', '_') : null,
     translations: translations,
 }
 
 const trans = (key: string, replace: object = {}, locale: string = null, config: Config = null) => {
     if (locale) {
-        (config ?? defaultConfig).locale = locale
+        if (!config) {
+            config = {...defaultConfig}
+        }
+        config.locale = locale
     }
 
     return translator(key, replace, false, config ?? defaultConfig)
@@ -27,14 +30,22 @@ const trans = (key: string, replace: object = {}, locale: string = null, config:
 
 const transChoice = (key: string, number: number, replace: Object = {}, locale: string = null, config: Config = null) => {
     if (locale) {
-        (config ?? defaultConfig).locale = locale
+        if (!config) {
+            config = {...defaultConfig}
+        }
+        config.locale = locale
     }
 
     return translator(key, {...replace, count: number}, true, config ?? defaultConfig)
+}
+
+const setLocale = (locale: string, fallbackLocale: string | null = null) => {
+    defaultConfig.locale = locale.replace('-', '_')
+    defaultConfig.fallbackLocale = fallbackLocale.replace('-', '_')
 }
 
 const __ = trans;
 const t = trans;
 const trans_choice = transChoice;
 
-export {trans, __, t, transChoice, trans_choice}
+export {trans, __, t, transChoice, trans_choice, setLocale}

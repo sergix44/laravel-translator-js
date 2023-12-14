@@ -5,7 +5,7 @@
   "description": "Laravel localization bridge for your frontend.",
   "main": "index.ts",
   "scripts": {
-    "test": "vitest"
+    "tests": "vitest --run"
   },
   "repository": {
     "type": "git",

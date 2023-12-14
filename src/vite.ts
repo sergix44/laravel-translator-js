@@ -34,5 +34,10 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
                 return `export default ${JSON.stringify(translations)}`
             }
         },
+        handleHotUpdate(ctx) {
+            if (ctx.file === resolvedVirtualModuleId) {
+                translations = exportTranslations(frameworkLangPath, langPath, ...additionalLangPaths)
+            }
+        }
     }
 }
