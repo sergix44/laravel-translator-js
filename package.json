@@ -3,9 +3,11 @@
   "type": "module",
   "version": "1.0.0",
   "description": "Laravel localization bridge for your frontend.",
-  "main": "index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
   "scripts": {
-    "tests": "vitest --run"
+    "tests": "vitest --run",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -19,10 +21,12 @@
   "homepage": "https://github.com/sergix44/laravel-translator-js#readme",
   "devDependencies": {
     "@types/node": "^20.10.4",
-    "glob": "^10.3.10",
-    "php-parser": "^3.1.5",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vitest": "^0.34.6"
+  },
+  "dependencies": {
+    "glob": "^10.3.10",
+    "php-parser": "^3.1.5"
   }
 }
