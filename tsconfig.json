@@ -1,13 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ES2020",
-    "moduleResolution": "bundler",
+    "module": "commonjs",
     "outDir": "dist",
-    "resolveJsonModule": true,
     "declaration": true,
     "esModuleInterop": true,
-    "skipDefaultLibCheck": true,
     "sourceMap": true
   },
   "include": [

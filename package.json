@@ -1,13 +1,39 @@
 {
   "name": "laravel-translator",
   "type": "module",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Laravel localization bridge for your frontend.",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "require": "./dist/*.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/index.d.ts"
+      ],
+      "vite": [
+        "dist/vite.d.ts"
+      ]
+    }
+  },
   "scripts": {
     "tests": "vitest --run",
-    "build": "tsc"
+    "prepublishOnly": "tsup ./src --external virtual:laravel-translations --format cjs,esm --dts"
   },
   "repository": {
     "type": "git",
@@ -21,6 +47,7 @@
   "homepage": "https://github.com/sergix44/laravel-translator-js#readme",
   "devDependencies": {
     "@types/node": "^20.10.4",
+    "tsup": "^8.0.1",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vitest": "^0.34.6"
