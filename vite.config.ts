@@ -6,4 +6,9 @@ export default defineConfig({
     plugins: [laravelTranslator({
         langPath: 'tests/fixtures/lang',
     })],
+    test: {
+        coverage: {
+            provider: 'v8',
+        },
+    },
 })

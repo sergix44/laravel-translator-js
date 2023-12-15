@@ -1,5 +1,5 @@
 import {expect, test} from "vitest";
-import {trans, trans_choice} from "../src";
+import {setLocale, trans, trans_choice} from "../src";
 
 test('trans works with random key', async () => {
     const r = trans('random.key')
@@ -43,4 +43,22 @@ test('trans choice works with multi', async () => {
     expect(r).toBe('Cars')
 })
 
+test('setLocale works', async () => {
+    setLocale('pt')
 
+    expect(trans('Welcome, :name!', {name: 'John'})).toBe('Bem-vindo, John!')
+    expect(trans('nested.cars.car.is_electric')).toBe('É elétrico?')
+})
+
+test('setLocale with fallback works', async () => {
+    setLocale('fr', 'pt')
+
+    expect(trans('auth.failed')).toBe('Ces identifiants ne correspondent pas à nos enregistrements.')
+    expect(trans('nested.cars.car.is_electric')).toBe('É elétrico?')
+})
+
+test('specifying locale works', async () => {
+    expect(trans('auth.failed', {}, 'fr')).toBe('Ces identifiants ne correspondent pas à nos enregistrements.')
+    expect(trans('auth.failed', {}, 'en')).toBe('These credentials do not match our records.')
+    expect(trans('auth.failed', {}, 'pt')).toBe('As credenciais indicadas não coincidem com as registadas no sistema.')
+})

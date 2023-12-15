@@ -1,7 +1,7 @@
 {
   "name": "laravel-translator",
   "type": "module",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Laravel localization bridge for your frontend.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -47,10 +47,11 @@
   "homepage": "https://github.com/sergix44/laravel-translator-js#readme",
   "devDependencies": {
     "@types/node": "^20.10.4",
+    "@vitest/coverage-v8": "^1.0.4",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
-    "vitest": "^0.34.6"
+    "vitest": "^1.0.0"
   },
   "dependencies": {
     "glob": "^10.3.10",

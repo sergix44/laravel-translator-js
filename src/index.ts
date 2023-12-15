@@ -4,8 +4,8 @@ import translations from 'virtual:laravel-translations'
 
 declare global {
     interface Window {
-        locale: string;
-        fallbackLocale: string;
+        locale?: string;
+        fallbackLocale?: string;
     }
 }
 
@@ -40,8 +40,8 @@ const transChoice = (key: string, number: number, replace: Object = {}, locale: 
 }
 
 const setLocale = (locale: string, fallbackLocale: string | null = null) => {
-    defaultConfig.locale = locale.replace('-', '_')
-    defaultConfig.fallbackLocale = fallbackLocale.replace('-', '_')
+    defaultConfig.locale = locale?.replace('-', '_') ?? 'en'
+    defaultConfig.fallbackLocale = fallbackLocale?.replace('-', '_') ?? null
 }
 
 const __ = trans;

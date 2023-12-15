@@ -145,7 +145,7 @@ In production mode, the translations are parsed and bundled automatically when y
 
 ## ⚖️ License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+The MIT License (MIT). Please see [License File](LICENSE) for more information.
 
 ## 🏅 Credits
 
