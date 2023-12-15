@@ -16,7 +16,7 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
     const virtualModuleId = 'virtual:laravel-translations'
     const resolvedVirtualModuleId = '\0' + virtualModuleId
 
-    let translations = null
+    const paths = [frameworkLangPath, langPath, ...additionalLangPaths]
     return {
         name: 'laravelTranslator',
         enforce: 'post',
@@ -27,16 +27,22 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
         },
         load(id) {
             if (id === resolvedVirtualModuleId) {
-                if (!translations) {
-                    translations = exportTranslations(frameworkLangPath, langPath, ...additionalLangPaths)
-                }
-
-                return `export default ${JSON.stringify(translations)}`
+                return `export default ${JSON.stringify(exportTranslations(...paths))}`
             }
         },
         handleHotUpdate(ctx) {
-            if (ctx.file === resolvedVirtualModuleId) {
-                translations = exportTranslations(frameworkLangPath, langPath, ...additionalLangPaths)
+            for (const lp of paths) {
+                const relative = path.relative(lp, ctx.file);
+                const isSub = relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+                if (isSub) {
+                    const virtualModule = ctx.server.moduleGraph.getModuleById(resolvedVirtualModuleId)!;
+                    ctx.server.moduleGraph.invalidateModule(virtualModule)
+                    ctx.server.ws.send({
+                        type: 'full-reload',
+                        path: '*'
+                    });
+                    return
+                }
             }
         }
     }

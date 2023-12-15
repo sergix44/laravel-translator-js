@@ -13,7 +13,7 @@ const isServer = typeof window === 'undefined'
 
 const defaultConfig: Config = {
     locale: !isServer && document.documentElement.lang ? document.documentElement.lang.replace('-', '_') : 'en',
-    fallbackLocale: !isServer && window ? window?.fallbackLocale.replace('-', '_') : null,
+    fallbackLocale: !isServer && window ? window?.fallbackLocale?.replace('-', '_') : null,
     translations: translations,
 }
 
