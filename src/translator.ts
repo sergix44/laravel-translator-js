@@ -18,7 +18,7 @@ export const translator = (key: string, replace: object, pluralize: boolean, con
         translation = getTranslation(key, fallbackLocale, config.translations)
     }
 
-    return translate(translation ?? key, replace, locale, pluralize)
+    return translate(translation ?? key, replace, locale, pluralize) as string
 }
 
 const getTranslation = (key: string, locale: string, translations: object) => {

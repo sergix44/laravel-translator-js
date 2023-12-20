@@ -1,5 +1,9 @@
-import {expect, test} from "vitest";
+import {beforeEach, expect, test} from "vitest";
 import {setLocale, trans, trans_choice} from "../src";
+
+beforeEach(() => {
+    setLocale('en', null)
+});
 
 test('trans works with random key', async () => {
     const r = trans('random.key')
@@ -61,4 +65,10 @@ test('specifying locale works', async () => {
     expect(trans('auth.failed', {}, 'fr')).toBe('Ces identifiants ne correspondent pas à nos enregistrements.')
     expect(trans('auth.failed', {}, 'en')).toBe('These credentials do not match our records.')
     expect(trans('auth.failed', {}, 'pt')).toBe('As credenciais indicadas não coincidem com as registadas no sistema.')
+})
+
+test('trans return object for partial translation paths', async () => {
+    const r = trans('domain.car.foo.level1') as Object
+
+    expect(r).toEqual({level2: 'barpt'})
 })
