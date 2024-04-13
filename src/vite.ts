@@ -13,33 +13,29 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
     const additionalLangPaths = typeof options === 'string' ? [] : options.additionalLangPaths ?? []
     const frameworkLangPath = 'vendor/laravel/framework/src/Illuminate/Translation/lang/'.replace('/', path.sep)
 
-    const virtualModuleId = 'virtual:laravel-translations'
-    const resolvedVirtualModuleId = '\0' + virtualModuleId
+    const moduleId = '\0laravel-translations'
 
     const paths = [frameworkLangPath, langPath, ...additionalLangPaths]
     return {
         name: 'laravel-translator',
-        config: () => ({
-           optimizeDeps: {
-               exclude: [virtualModuleId]
-           }
-        }),
         resolveId(id) {
-            if (id === virtualModuleId) {
-                return resolvedVirtualModuleId
+            if (id === moduleId) {
+                return moduleId
             }
+            return null
         },
         load(id) {
-            if (id === resolvedVirtualModuleId) {
+            if (id === moduleId) {
                 return `export default ${JSON.stringify(exportTranslations(...paths))}`
             }
+            return null
         },
         handleHotUpdate(ctx) {
             for (const lp of paths) {
                 const relative = path.relative(lp, ctx.file);
                 const isSub = relative && !relative.startsWith('..') && !path.isAbsolute(relative);
                 if (isSub) {
-                    const virtualModule = ctx.server.moduleGraph.getModuleById(resolvedVirtualModuleId)!;
+                    const virtualModule = ctx.server.moduleGraph.getModuleById(moduleId)!;
                     ctx.server.moduleGraph.invalidateModule(virtualModule)
                     ctx.server.ws.send({
                         type: 'full-reload',
