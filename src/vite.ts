@@ -19,6 +19,11 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
     const paths = [frameworkLangPath, langPath, ...additionalLangPaths]
     return {
         name: 'laravel-translator',
+        config: () => ({
+            optimizeDeps: {
+                exclude: [virtualModuleId]
+            }
+        }),
         resolveId(id) {
             if (id === virtualModuleId) {
                 return resolvedVirtualModuleId
