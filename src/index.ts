@@ -1,6 +1,6 @@
 import {Config, translator} from './translator'
 // @ts-ignore
-import translations from '\0laravel-translations'
+import translations from 'virtual-laravel-translations'
 
 declare global {
     interface Window {

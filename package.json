@@ -33,7 +33,7 @@
   },
   "scripts": {
     "tests": "vitest --run",
-    "prepublishOnly": "tsup ./src --external virtual:laravel-translations --format cjs,esm --dts"
+    "prepublishOnly": "tsup ./src --external virtual-laravel-translations --format cjs,esm --dts"
   },
   "repository": {
     "type": "git",
