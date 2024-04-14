@@ -1,20 +1,18 @@
 import {Config, translator} from './translator'
-// @ts-ignore
-import translations from 'virtual-laravel-translations'
-
 declare global {
     interface Window {
         locale?: string;
         fallbackLocale?: string;
     }
 }
+declare const __LARAVEL_TRANSLATIONS__: object;
 
 const isServer = typeof window === 'undefined'
 
 const defaultConfig: Config = {
     locale: !isServer && document.documentElement.lang ? document.documentElement.lang.replace('-', '_') : 'en',
     fallbackLocale: !isServer && window ? window?.fallbackLocale?.replace('-', '_') : null,
-    translations: translations,
+    translations: __LARAVEL_TRANSLATIONS__,
 }
 
 const trans = (key: string, replace: object = {}, locale: string = null, config: Config = null) => {

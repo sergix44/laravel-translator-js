@@ -20,22 +20,10 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
     return {
         name: 'laravel-translator',
         config: () => ({
-            optimizeDeps: {
-                exclude: [virtualModuleId]
+            define: {
+                __LARAVEL_TRANSLATIONS__: exportTranslations(...paths)
             }
         }),
-        resolveId(id) {
-            if (id === virtualModuleId) {
-                return resolvedVirtualModuleId
-            }
-            return null
-        },
-        load(id) {
-            if (id === resolvedVirtualModuleId) {
-                return `export default ${JSON.stringify(exportTranslations(...paths))}`
-            }
-            return null
-        },
         handleHotUpdate(ctx) {
             for (const lp of paths) {
                 const relative = path.relative(lp, ctx.file);
