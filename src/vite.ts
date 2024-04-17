@@ -22,7 +22,10 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
         config: () => ({
             define: {
                 __LARAVEL_TRANSLATIONS__: exportTranslations(...paths)
-            }
+            },
+            ssr: {
+                noExternal: ['laravel-translator']
+            },
         }),
         handleHotUpdate(ctx) {
             for (const lp of paths) {

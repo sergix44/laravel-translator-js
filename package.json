@@ -1,7 +1,7 @@
 {
   "name": "laravel-translator",
   "type": "module",
-  "version": "1.0.4",
+  "version": "1.1.0-beta.2",
   "description": "Laravel localization bridge for your frontend.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
