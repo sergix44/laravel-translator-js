@@ -22,7 +22,10 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
         config: () => ({
             optimizeDeps: {
                 exclude: [virtualModuleId]
-            }
+            },
+            ssr: {
+                noExternal: ['laravel-translator']
+            },
         }),
         resolveId(id) {
             if (id === virtualModuleId) {
