@@ -13,6 +13,7 @@ and [lingua](https://github.com/cyberwolf-studio/lingua).
 - Frontend framework-agnostic, works with any framework or even plain javascript (and even without Laravel)
 - Use the same translation files you use in your backend code (both php and json files are supported)
 - No extra configuration required: install, register and use
+- Zero SSR configuration required
 - No export step required, translations are parsed and bundled directly from your backend code by Vite
 - Support for hot reloading
 - Minimal and lightweight
