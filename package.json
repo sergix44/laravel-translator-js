@@ -1,7 +1,7 @@
 {
   "name": "laravel-translator",
   "type": "module",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Laravel localization bridge for your frontend.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -33,7 +33,7 @@
   },
   "scripts": {
     "tests": "vitest --run",
-    "prepublishOnly": "tsup ./src --external virtual-laravel-translations --format cjs,esm --dts"
+    "prepublishOnly": "tsup ./src --external virtual-laravel-translations,vue --format cjs,esm --dts"
   },
   "repository": {
     "type": "git",

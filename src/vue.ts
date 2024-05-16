@@ -1,8 +1,9 @@
 import {trans, trans_choice} from "./index";
 import {App, computed, Ref} from "vue";
+import {Config} from "./translator";
+
 // @ts-ignore
 import translations from 'virtual-laravel-translations';
-import {Config} from "./translator";
 
 export const LaravelTranslatorVue = {
     install: (app: App, options: ConfigVue) => {
