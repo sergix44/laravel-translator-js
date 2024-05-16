@@ -53,8 +53,12 @@ const translate = (translation: string | object, replace: object = {}, locale: s
     }
 
     Object.keys(replace).forEach(key => {
-        const value = replace[key]
-        translation = translation.toString().replace(':' + key, value)
+        const value = replace[key]?.toString()
+
+        translation = translation.toString()
+            .replace(':' + key, value)
+            .replace(':' + key.charAt(0).toUpperCase() + key.slice(1), value.charAt(0).toUpperCase() + value.slice(1))
+            .replace(':' + key.toUpperCase(), value.toUpperCase())
     })
 
     return translation

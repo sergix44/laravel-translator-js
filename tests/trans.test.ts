@@ -72,3 +72,21 @@ test('trans return object for partial translation paths', async () => {
 
     expect(r).toEqual({level2: 'barpt'})
 })
+
+test('trans works with capitalization lowercase', async () => {
+    const r = trans('auth.accepted_1', {'attribute': 'email'})
+
+    expect(r).toBe('The email must be accepted.')
+})
+
+test('trans works with capitalization ucfirst', async () => {
+    const r = trans('auth.accepted_2', {'attribute': 'email'})
+
+    expect(r).toBe('The Email must be accepted.')
+})
+
+test('trans works with capitalization uppercase', async () => {
+    const r = trans('auth.accepted_3', {'attribute': 'email'})
+
+    expect(r).toBe('The EMAIL must be accepted.')
+})
