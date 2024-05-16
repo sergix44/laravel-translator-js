@@ -90,21 +90,29 @@ trans_choice('user.count', 2) // Users
 
 #### Vue
 
-```html
+Register the plugin:
+```js
+...
+.use(LaravelTranslatorVue, {
+    locale: 'it'
+    // fallbackLocale: 'en', optional
+})
+...
+```
 
+Use the functions function in your components:
+
+```html
 <template>
     <div>
         <h1>{{ __('page.title') }}</h1>
 
         <p>{{ __('page.content') }}</p>
+        <p>{{ t('page.content') }}</p>
+        <p>{{ trans('page.content') }}</p>
+        <p>{{ trans_choice('page.content') }}</p>
     </div>
 </template>
-
-<script>
-    import {__} from "laravel-translator"
-
-    // ...
-</script>
 ```
 
 ### Advanced usage
