@@ -2,7 +2,7 @@ import {choose} from "./pluralizer";
 
 export interface Config {
     locale: string
-    fallbackLocale: string
+    fallbackLocale: string | null
     translations: object
 }
 

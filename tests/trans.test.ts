@@ -1,5 +1,5 @@
-import {beforeEach, expect, test} from "vitest";
-import {setLocale, trans, trans_choice} from "../src";
+import {beforeEach, expect, test, vi} from "vitest";
+import {getLocale, onLocaleChange, setLocale, trans, trans_choice} from "../src";
 
 beforeEach(() => {
     setLocale('en', null)
@@ -59,6 +59,22 @@ test('setLocale with fallback works', async () => {
 
     expect(trans('auth.failed')).toBe('Ces identifiants ne correspondent pas à nos enregistrements.')
     expect(trans('nested.cars.car.is_electric')).toBe('É elétrico?')
+})
+
+test('setLocale notifies framework-agnostic subscribers', () => {
+    const listener = vi.fn()
+    const unsubscribe = onLocaleChange(listener)
+
+    setLocale('pt-BR', 'en-US')
+
+    expect(getLocale()).toEqual({locale: 'pt_BR', fallbackLocale: 'en_US'})
+    expect(listener).toHaveBeenCalledOnce()
+    expect(listener).toHaveBeenCalledWith({locale: 'pt_BR', fallbackLocale: 'en_US'})
+
+    unsubscribe()
+    setLocale('en')
+
+    expect(listener).toHaveBeenCalledOnce()
 })
 
 test('specifying locale works', async () => {

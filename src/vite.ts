@@ -8,15 +8,29 @@ export interface VitePluginOptionsInterface {
 }
 
 export default function laravelTranslator(options: string | VitePluginOptionsInterface = 'lang'): Plugin {
-    let langPath = typeof options === 'string' ? options : options.langPath ?? 'lang'
-    langPath = langPath.replace(/[\\/]$/, '') + path.sep
+    const langPath = typeof options === 'string' ? options : options.langPath ?? 'lang'
     const additionalLangPaths = typeof options === 'string' ? [] : options.additionalLangPaths ?? []
-    const frameworkLangPath = 'vendor/laravel/framework/src/Illuminate/Translation/lang/'.replace('/', path.sep)
+    const frameworkLangPath = path.join('vendor', 'laravel', 'framework', 'src', 'Illuminate', 'Translation', 'lang')
 
     const virtualModuleId = 'virtual-laravel-translations'
     const resolvedVirtualModuleId = '\0' + virtualModuleId
 
-    const paths = [frameworkLangPath, langPath, ...additionalLangPaths]
+    const paths = [frameworkLangPath, langPath, ...additionalLangPaths].map((langPath) => path.resolve(langPath))
+    const isTranslationFile = (file: string) => {
+        if (!['.php', '.json'].includes(path.extname(file).toLowerCase())) {
+            return false
+        }
+
+        return paths.some((langPath) => {
+            const relativePath = path.relative(langPath, file)
+
+            return relativePath !== ''
+                && relativePath !== '..'
+                && !relativePath.startsWith(`..${path.sep}`)
+                && !path.isAbsolute(relativePath)
+        })
+    }
+
     return {
         name: 'laravel-translator',
         config: () => ({
@@ -39,20 +53,22 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
             }
             return null
         },
+        configureServer(server) {
+            server.watcher.add(paths)
+        },
         handleHotUpdate(ctx) {
-            for (const lp of paths) {
-                const relative = path.relative(lp, ctx.file);
-                const isSub = relative && !relative.startsWith('..') && !path.isAbsolute(relative);
-                if (isSub) {
-                    const virtualModule = ctx.server.moduleGraph.getModuleById(resolvedVirtualModuleId)!;
-                    ctx.server.moduleGraph.invalidateModule(virtualModule)
-                    ctx.server.ws.send({
-                        type: 'full-reload',
-                        path: '*'
-                    });
-                    return
-                }
+            if (!isTranslationFile(ctx.file)) {
+                return
             }
+
+            const virtualModule = ctx.server.moduleGraph.getModuleById(resolvedVirtualModuleId)
+            if (!virtualModule) {
+                return []
+            }
+
+            ctx.server.moduleGraph.invalidateModule(virtualModule, new Set(), ctx.timestamp, true)
+
+            return [virtualModule]
         }
     }
 }

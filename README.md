@@ -15,7 +15,7 @@ and [lingua](https://github.com/cyberwolf-studio/lingua).
 - No extra configuration required: install, register and use
 - Zero SSR configuration required
 - No export step required, translations are parsed and bundled directly from your backend code by Vite
-- Support for hot reloading
+- Hot reload PHP and JSON translations without forcing a page refresh
 - Minimal and lightweight
 
 ## 🚀 Installation
@@ -117,13 +117,31 @@ Use the functions function in your components:
 
 ### Advanced usage
 
-It's possible to set the locale and the fallback locale manually, by using the `setLocale` function:
+It's possible to set the locale and the fallback locale manually by using the `setLocale` function. Vue applications
+using `LaravelTranslatorVue` update their rendered translations immediately:
 
 ```js
 import {setLocale} from "laravel-translator"
 
 setLocale('it') // Set the locale to 'it'
 setLocale('it', 'en') // Set the locale to 'it' and the fallback locale to 'en'
+```
+
+Other frameworks and plain JavaScript can subscribe to locale changes and rerender their own UI:
+
+```js
+import {onLocaleChange, setLocale, trans} from 'laravel-translator'
+
+const render = () => {
+    document.querySelector('#page-title').textContent = trans('page.title')
+}
+
+const unsubscribe = onLocaleChange(render)
+
+render()
+setLocale('it')
+
+// Call unsubscribe() when the view is destroyed.
 ```
 
 You can add additional path where to look for translation files on the Vite plugin options:
@@ -148,7 +166,8 @@ export default defineConfig({
 This package uses [Vite](https://vitejs.dev/) Virtual Modules feature to parse your translations files and make them
 available in your frontend code, without the need to export them to a separate file.
 
-In development mode, the translations are parsed and bundled on the fly, and hot reloaded when the files change.
+In development mode, the translations are parsed and bundled on the fly. When a PHP or JSON translation file changes,
+Vite updates the affected frontend modules while preserving the current application state.
 
 In production mode, the translations are parsed and bundled automatically when you run `npm run build`.
 

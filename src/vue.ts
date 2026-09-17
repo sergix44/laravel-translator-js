@@ -1,5 +1,5 @@
-import {trans, trans_choice} from "./index";
-import {App, computed, Ref} from "vue";
+import {getLocale, onLocaleChange, setLocale, trans, trans_choice} from "./index";
+import {App, computed, Ref, shallowRef, watch} from "vue";
 import {Config} from "./translator";
 
 // @ts-ignore
@@ -7,14 +7,37 @@ import translations from 'virtual-laravel-translations';
 
 export const LaravelTranslatorVue = {
     install: (app: App, options: ConfigVue) => {
-        const locale = options.locale || '';
-        const fallbackLocale = options.fallbackLocale || '';
+        const configuredLocale = typeof options.locale === 'string' ? options.locale : options.locale.value;
+        const configuredFallbackLocale = typeof options.fallbackLocale === 'string'
+            ? options.fallbackLocale
+            : options.fallbackLocale?.value ?? null;
+
+        setLocale(configuredLocale, configuredFallbackLocale);
+
+        const localeState = shallowRef(getLocale());
+        const stopLocaleSubscription = onLocaleChange((state) => {
+            localeState.value = state;
+        });
+        const stopLocaleWatcher = typeof options.locale === 'string'
+            ? null
+            : watch(options.locale, (locale) => setLocale(locale, getLocale().fallbackLocale), {flush: 'sync'});
+        const stopFallbackLocaleWatcher = !options.fallbackLocale || typeof options.fallbackLocale === 'string'
+            ? null
+            : watch(options.fallbackLocale, (fallbackLocale) => setLocale(getLocale().locale, fallbackLocale), {flush: 'sync'});
 
         const configuration = computed(() => ({
-            locale: (typeof locale === 'string') ? locale : locale?.value,
-            fallbackLocale: (typeof fallbackLocale === 'string') ? fallbackLocale : fallbackLocale?.value,
+            locale: localeState.value.locale,
+            fallbackLocale: localeState.value.fallbackLocale,
             translations: translations,
         }));
+
+        if (typeof app.onUnmount === 'function') {
+            app.onUnmount(() => {
+                stopLocaleSubscription();
+                stopLocaleWatcher?.();
+                stopFallbackLocaleWatcher?.();
+            });
+        }
 
         const translationCallback = (key: string, replace?: object, locale?: string) => trans(key, replace, undefined, {
             locale: locale || configuration.value.locale,

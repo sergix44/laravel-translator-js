@@ -1,7 +1,7 @@
 {
   "name": "laravel-translator",
   "type": "module",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Laravel localization bridge for your frontend.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -33,11 +33,12 @@
   },
   "scripts": {
     "tests": "vitest --run",
-    "prepublishOnly": "tsup ./src --external virtual-laravel-translations,vue --format cjs,esm --dts"
+    "build": "tsup ./src --external virtual-laravel-translations,vue --format cjs,esm --dts",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sergix44/laravel-translator-js.git"
+    "url": "git+https://github.com/sergix44/laravel-translator-js.git"
   },
   "author": "Sergio Brighenti",
   "license": "MIT",
@@ -46,16 +47,16 @@
   },
   "homepage": "https://github.com/sergix44/laravel-translator-js#readme",
   "devDependencies": {
-    "@types/node": "^20.10.4",
-    "@vitest/coverage-v8": "^1.0.4",
-    "tsup": "^8.0.1",
-    "typescript": "^5.3.3",
-    "vite": "^5.2.8",
-    "vitest": "^1.0.0",
-    "vue": "^3.4.27"
+    "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^5.0.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1",
+    "vue": "^3.5.43"
   },
   "dependencies": {
-    "glob": "^10.3.10",
-    "php-parser": "^3.1.5"
+    "glob": "^13.0.6",
+    "php-parser": "^3.7.0"
   }
 }
