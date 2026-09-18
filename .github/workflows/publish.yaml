@@ -41,4 +41,14 @@ jobs:
         run: npm run tests
 
       - name: Publish package
-        run: npm publish --access public
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+
+          # npm does not infer a dist-tag from a semver prerelease, so a
+          # prerelease would otherwise be published as "latest".
+          if [[ "$version" == *-* ]]; then
+            npm publish --access public --tag beta
+          else
+            npm publish --access public
+          fi
