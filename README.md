@@ -132,6 +132,42 @@ import {trans, __, t, trans_choice} from 'laravel-translator'
 </template>
 ```
 
+Handles created once in `<script setup>` stay live, because the template re-reads them on
+every render:
+
+```html
+<script setup>
+import {trans} from 'laravel-translator'
+
+const title = trans('page.title')
+</script>
+
+<template>
+    <h1>{{ title }}</h1>
+</template>
+```
+
+> **Attribute bindings need a changing value.** Vue diffs props by reference, and a handle
+> hoisted into `<script setup>` is the same object on every render — so Vue decides nothing
+> changed and skips the DOM update. Text interpolation is unaffected. For attributes, read
+> `.value`, or call `trans()` inline:
+>
+> ```html
+> <input :placeholder="title.value">          <!-- ✅ -->
+> <input :placeholder="trans('form.email')">  <!-- ✅ -->
+> <input :placeholder="title">                <!-- ❌ renders once, never updates -->
+> ```
+>
+> Passing a handle as a prop is fine as long as the child interpolates it — the child's own
+> render tracks the locale.
+
+Reading `.value` *inside* `<script setup>` snapshots the string, because setup runs once:
+
+```js
+const title = trans('page.title').value // ❌ frozen at the current locale
+const title = trans('page.title')       // ✅ stays live
+```
+
 To drive the locale from a ref, or to show the active one:
 
 ```js
