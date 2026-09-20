@@ -229,6 +229,20 @@ Import the translate store and use it with the `$` prefix:
 > The `$` must be on the store identifier, not the call. Write `{$__('key')}`, not
 > `{__('key')}` — the latter renders once and never updates.
 
+A handle is itself a Svelte store, so you can also hold one and use `$` on it directly:
+
+```html
+<script>
+    import {trans} from 'laravel-translator'
+
+    const title = trans('page.title')
+</script>
+
+<h1>{$title}</h1>
+```
+
+`fallbackLocale` and `localeState` are available alongside `locale` when you need them.
+
 ### Plain JavaScript
 
 ```js

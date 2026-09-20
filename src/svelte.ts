@@ -58,21 +58,45 @@ export const trans_choice: Readable<TranslateChoiceFn> = functionStore(buildTran
 /** `{$transChoice('user.count', 2)}` */
 export const transChoice: Readable<TranslateChoiceFn> = trans_choice
 
+export interface Writable<T> extends Readable<T> {
+    set(value: T): void
+
+    update(updater: (value: T) => T): void
+}
+
+const writableStore = <T>(read: () => T, write: (value: T) => void): Writable<T> => ({
+    subscribe(run: Subscriber<T>) {
+        run(read())
+
+        return onInvalidate(() => run(read()))
+    },
+    set: write,
+    update(updater) {
+        write(updater(read()))
+    },
+})
+
 /**
- * The active locale, as a writable-compatible store.
+ * The active locale as a string, so it round-trips through a form control:
  *
  *   <select bind:value={$locale}>
  */
-export const locale = {
+export const locale: Writable<string> = writableStore(
+    () => getLocale().locale,
+    (next) => setLocale(next),
+)
+
+/** The active fallback locale. */
+export const fallbackLocale: Writable<string | null> = writableStore(
+    () => getLocale().fallbackLocale,
+    (next) => setLocale(getLocale().locale, next),
+)
+
+/** The whole locale state, for when you need both values at once. */
+export const localeState: Readable<Readonly<LocaleState>> = {
     subscribe(run: Subscriber<Readonly<LocaleState>>) {
         run(getLocale())
 
         return onInvalidate(() => run(getLocale()))
-    },
-    set(next: string) {
-        setLocale(next)
-    },
-    update(updater: (state: Readonly<LocaleState>) => string) {
-        setLocale(updater(getLocale()))
     },
 }
