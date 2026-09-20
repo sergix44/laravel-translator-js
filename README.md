@@ -111,29 +111,57 @@ setLocale('it', null) // switch locale, clear the fallback
 
 ### Vue
 
-Import the adapter once, anywhere in your app:
-
-```js
-import 'laravel-translator/vue'
-```
-
-Every `trans()` read inside any template, `computed` or `watchEffect` is now reactive:
+Import the translation functions from the Vue entry point:
 
 ```html
 <script setup>
-import {trans, __, t, trans_choice} from 'laravel-translator'
+import {__, t, trans, trans_choice} from 'laravel-translator/vue'
 </script>
 
 <template>
     <h1>{{ __('page.title') }}</h1>
-    <p>{{ trans('page.content') }}</p>
     <p>{{ trans_choice('user.count', 2) }}</p>
     <input :placeholder="t('form.email')">
 </template>
 ```
 
-Handles created once in `<script setup>` stay live, because the template re-reads them on
-every render:
+These return **plain strings**, so they drop straight into props typed as `string`,
+including third-party components:
+
+```html
+<Head :title="__('settings.title')"/>
+<HeadingSmall :title="__('settings.langtime.title')"/>
+```
+
+They are still fully reactive. The locale dependency is registered while the function runs,
+so any template, `computed` or `watchEffect` that calls one re-runs when the locale
+changes. Importing this module is also what installs the Vue adapter — there is no plugin
+to register.
+
+The one thing to watch: a translation read *outside* a reactive context is a plain string
+and stays frozen, because nothing re-runs to refresh it. Wrap it in `computed`:
+
+```js
+const title = __('page.title')              // ❌ frozen at the current locale
+const title = computed(() => __('page.title')) // ✅ stays live
+```
+
+To drive the locale from a ref, or to show the active one:
+
+```js
+import {syncLocale, useLocale} from 'laravel-translator/vue'
+
+const locale = ref('it')
+syncLocale(locale) // changing locale.value now changes the app locale
+
+const current = useLocale() // computed<{locale, fallbackLocale}>
+```
+
+<details>
+<summary>Using the framework-agnostic handle in Vue</summary>
+
+`trans()` from `laravel-translator` returns a handle rather than a string. It works in Vue
+too, and has the advantage that it can be hoisted into `<script setup>` and stay live:
 
 ```html
 <script setup>
@@ -147,37 +175,13 @@ const title = trans('page.title')
 </template>
 ```
 
-> **Attribute bindings need a changing value.** Vue diffs props by reference, and a handle
-> hoisted into `<script setup>` is the same object on every render — so Vue decides nothing
-> changed and skips the DOM update. Text interpolation is unaffected. For attributes, read
-> `.value`, or call `trans()` inline:
->
-> ```html
-> <input :placeholder="title.value">          <!-- ✅ -->
-> <input :placeholder="trans('form.email')">  <!-- ✅ -->
-> <input :placeholder="title">                <!-- ❌ renders once, never updates -->
-> ```
->
-> Passing a handle as a prop is fine as long as the child interpolates it — the child's own
-> render tracks the locale.
+Two caveats make the string functions above the better default:
 
-Reading `.value` *inside* `<script setup>` snapshots the string, because setup runs once:
+- A handle is not a `string`, so it fails to type-check against props declared as `string`.
+- Vue diffs props by reference. A handle hoisted into `<script setup>` is the same object
+  on every render, so `:placeholder="title"` never updates. Use `title.value` there.
 
-```js
-const title = trans('page.title').value // ❌ frozen at the current locale
-const title = trans('page.title')       // ✅ stays live
-```
-
-To drive the locale from a ref, or to show the active one:
-
-```js
-import {syncLocale, useLocale} from 'laravel-translator/vue'
-
-const locale = ref('it')
-syncLocale(locale) // changing locale.value now changes the app locale
-
-const current = useLocale() // computed<{locale, fallbackLocale}>
-```
+</details>
 
 ### React
 
@@ -306,7 +310,7 @@ export default defineConfig({
 | Subtree lookups | `trans('a.b') as Object` | `trans('a.b').value` |
 | Vue setup | `app.use(LaravelTranslatorVue, {locale})` | `import 'laravel-translator/vue'` |
 | Vue ref locale | `app.use(..., {locale: someRef})` | `syncLocale(someRef)` |
-| Vue templates | globals from the plugin | import `trans`/`__` in `<script setup>` |
+| Vue templates | globals from the plugin | import `__`/`t`/`trans` from `laravel-translator/vue` |
 | React | not supported | `laravel-translator/react` |
 | Svelte | `{__('x')}` (never updated) | `{$__('x')}` from `laravel-translator/svelte` |
 | Plain JS | manual `onLocaleChange` + re-render | `bind()` / `effect()` from `laravel-translator/vanilla` |

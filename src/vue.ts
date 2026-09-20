@@ -1,6 +1,7 @@
 import {computed, isRef, shallowRef, watch, type ComputedRef, type Ref} from 'vue'
 import {registerReactivityAdapter} from './reactivity'
 import {getLocale, setLocale, type LocaleState} from './store'
+import {trans as createTranslation, transChoice as createTranslationChoice} from './index'
 
 /**
  * Importing this module is the entire Vue setup.
@@ -56,3 +57,25 @@ export const syncLocale = (
         stopFallback?.()
     }
 }
+
+/**
+ * Translate to a plain string.
+ *
+ * The tracker registers the dependency while this runs, so calling it from a template, a
+ * computed or a watchEffect is reactive: the effect re-runs on a locale change and calls
+ * this again. Returning a real string keeps the value assignable to `string` props, which
+ * matters for third-party components.
+ *
+ * Hoisting the result out of a reactive context gives a dead string. Wrap it in
+ * `computed(() => trans('key'))`, or use the handle from `laravel-translator` instead.
+ */
+export const trans = (key: string, replace?: object, locale?: string): string =>
+    String(createTranslation(key, replace, locale))
+
+/** Translate with pluralization, to a plain string. */
+export const transChoice = (key: string, number: number, replace?: object, locale?: string): string =>
+    String(createTranslationChoice(key, number, replace, locale))
+
+export const __ = trans
+export const t = trans
+export const trans_choice = transChoice
