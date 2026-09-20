@@ -1,6 +1,6 @@
 import {computed, isRef, shallowRef, watch, type ComputedRef, type Ref} from 'vue'
 import {registerReactivityAdapter} from './reactivity'
-import {getLocale, setLocale, type LocaleState} from './store'
+import {getLocale, setLocale as setGlobalLocale, type LocaleState} from './store'
 import {trans as createTranslation, transChoice as createTranslationChoice} from './index'
 
 /**
@@ -33,23 +33,27 @@ export const useLocale = (): ComputedRef<Readonly<LocaleState>> => {
 }
 
 /**
- * Drive the translator from a Vue ref, so changing the ref changes the global locale.
- * Returns a function that stops the sync.
+ * Set the active locale.
+ *
+ * Given a string it behaves like `setLocale` from the core entry point. Given a ref it
+ * also keeps the two in sync, so later writes to the ref change the locale as well.
+ *
+ * Returns a function that stops watching; it is a no-op when no ref was passed.
  */
-export const syncLocale = (
+export const setLocale = (
     locale: Ref<string> | string,
     fallbackLocale?: Ref<string | null> | string | null,
 ) => {
     const readFallback = () => (isRef(fallbackLocale) ? fallbackLocale.value : fallbackLocale)
 
-    setLocale(isRef(locale) ? locale.value : locale, readFallback())
+    setGlobalLocale(isRef(locale) ? locale.value : locale, readFallback())
 
     const stopLocale = isRef(locale)
-        ? watch(locale, (next) => setLocale(next, readFallback()), {flush: 'sync'})
+        ? watch(locale, (next) => setGlobalLocale(next, readFallback()), {flush: 'sync'})
         : null
 
     const stopFallback = isRef(fallbackLocale)
-        ? watch(fallbackLocale, (next) => setLocale(getLocale().locale, next), {flush: 'sync'})
+        ? watch(fallbackLocale, (next) => setGlobalLocale(getLocale().locale, next), {flush: 'sync'})
         : null
 
     return () => {

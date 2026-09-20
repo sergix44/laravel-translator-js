@@ -149,10 +149,14 @@ const title = computed(() => __('page.title')) // ✅ stays live
 To drive the locale from a ref, or to show the active one:
 
 ```js
-import {syncLocale, useLocale} from 'laravel-translator/vue'
+import {setLocale, useLocale} from 'laravel-translator/vue'
 
+setLocale('it')
+
+// Given a ref, setLocale also keeps the two in sync, so later writes to the
+// ref change the locale as well. It returns a function that stops watching.
 const locale = ref('it')
-syncLocale(locale) // changing locale.value now changes the app locale
+const stop = setLocale(locale)
 
 const current = useLocale() // computed<{locale, fallbackLocale}>
 ```
@@ -309,7 +313,7 @@ export default defineConfig({
 | Strict equality | `trans('a.b') === 'x'` | `trans('a.b').value === 'x'` |
 | Subtree lookups | `trans('a.b') as Object` | `trans('a.b').value` |
 | Vue setup | `app.use(LaravelTranslatorVue, {locale})` | `import 'laravel-translator/vue'` |
-| Vue ref locale | `app.use(..., {locale: someRef})` | `syncLocale(someRef)` |
+| Vue ref locale | `app.use(..., {locale: someRef})` | `setLocale(someRef)` from `laravel-translator/vue` |
 | Vue templates | globals from the plugin | import `__`/`t`/`trans` from `laravel-translator/vue` |
 | React | not supported | `laravel-translator/react` |
 | Svelte | `{__('x')}` (never updated) | `{$__('x')}` from `laravel-translator/svelte` |

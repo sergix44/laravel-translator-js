@@ -1,11 +1,11 @@
 import {effect, nextTick, ref, stop} from 'vue'
 import {toDisplayString} from '@vue/shared'
 import {beforeEach, expect, test} from 'vitest'
-import {setLocale, trans} from '../src'
-import {syncLocale, useLocale} from '../src/vue'
+import {setLocale as setGlobalLocale, trans} from '../src'
+import {setLocale, useLocale} from '../src/vue'
 
 beforeEach(() => {
-    setLocale('en', null)
+    setGlobalLocale('en', null)
 })
 
 test('a translation read inside a Vue effect re-runs when the locale changes', () => {
@@ -20,7 +20,7 @@ test('a translation read inside a Vue effect re-runs when the locale changes', (
     expect(rendered).toBe('Wecome!')
     expect(renders).toBe(1)
 
-    setLocale('pt')
+    setGlobalLocale('pt')
 
     expect(rendered).toBe('Bem-vindo!')
     expect(renders).toBe(2)
@@ -38,7 +38,7 @@ test('an unchanged locale does not re-run effects', () => {
 
     expect(renders).toBe(1)
 
-    setLocale('en')
+    setGlobalLocale('en')
 
     expect(renders).toBe(1)
 
@@ -53,7 +53,7 @@ test('a stopped effect no longer reacts to locale changes', () => {
     })
 
     stop(renderEffect)
-    setLocale('pt')
+    setGlobalLocale('pt')
 
     expect(rendered).toBe('Wecome!')
 })
@@ -63,14 +63,14 @@ test("Vue's template renderer prints the translation, not a JSON blob", () => {
     // objects whose toString is Object.prototype.toString, so the handle must pass through.
     expect(toDisplayString(trans('Welcome!'))).toBe('Wecome!')
 
-    setLocale('pt')
+    setGlobalLocale('pt')
 
     expect(toDisplayString(trans('Welcome!'))).toBe('Bem-vindo!')
 })
 
-test('syncLocale drives the global locale from a Vue ref', () => {
+test('setLocale drives the global locale from a Vue ref', () => {
     const locale = ref('en')
-    const stopSync = syncLocale(locale)
+    const stopSync = setLocale(locale)
 
     let rendered = ''
     const renderEffect = effect(() => {
@@ -87,9 +87,9 @@ test('syncLocale drives the global locale from a Vue ref', () => {
     stop(renderEffect)
 })
 
-test('syncLocale stops writing to the store once disposed', () => {
+test('setLocale stops writing to the store once disposed', () => {
     const locale = ref('en')
-    const stopSync = syncLocale(locale)
+    const stopSync = setLocale(locale)
 
     stopSync()
     locale.value = 'pt'
@@ -102,7 +102,7 @@ test('useLocale exposes the active locale as a computed', async () => {
 
     expect(state.value.locale).toBe('en')
 
-    setLocale('pt-BR', 'en')
+    setGlobalLocale('pt-BR', 'en')
     await nextTick()
 
     expect(state.value).toEqual({locale: 'pt_BR', fallbackLocale: 'en'})
