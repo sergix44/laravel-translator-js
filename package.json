@@ -1,7 +1,7 @@
 {
   "name": "laravel-translator",
   "type": "module",
-  "version": "1.2.0-rc.1",
+  "version": "2.0.0",
   "description": "Laravel localization bridge for your frontend.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -15,26 +15,63 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js",
-      "require": "./dist/*.cjs"
-    }
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js",
+      "require": "./dist/vite.cjs"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.js",
+      "require": "./dist/vue.cjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "require": "./dist/react.cjs"
+    },
+    "./svelte": {
+      "types": "./dist/svelte.d.ts",
+      "import": "./dist/svelte.js",
+      "require": "./dist/svelte.cjs"
+    },
+    "./vanilla": {
+      "types": "./dist/vanilla.d.ts",
+      "import": "./dist/vanilla.js",
+      "require": "./dist/vanilla.cjs"
+    },
+    "./package.json": "./package.json"
   },
   "typesVersions": {
     "*": {
-      "*": [
+      "index": [
         "dist/index.d.ts"
       ],
       "vite": [
         "dist/vite.d.ts"
+      ],
+      "vue": [
+        "dist/vue.d.ts"
+      ],
+      "react": [
+        "dist/react.d.ts"
+      ],
+      "svelte": [
+        "dist/svelte.d.ts"
+      ],
+      "vanilla": [
+        "dist/vanilla.d.ts"
+      ],
+      "*": [
+        "dist/index.d.ts"
       ]
     }
   },
   "scripts": {
     "tests": "vitest --run",
-    "build": "tsup ./src --external virtual-laravel-translations,vue --format cjs,esm --dts",
-    "prepublishOnly": "npm run build"
+    "build": "tsup",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "repository": {
     "type": "git",
@@ -47,8 +84,17 @@
   },
   "homepage": "https://github.com/sergix44/laravel-translator-js#readme",
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/svelte": "^5.4.2",
     "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "^5.0.1",
+    "jsdom": "^29.1.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "svelte": "^5.57.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vite": "^8.3.0",
@@ -58,5 +104,29 @@
   "dependencies": {
     "glob": "^13.0.6",
     "php-parser": "^3.7.0"
+  },
+  "sideEffects": [
+    "./dist/vue.js",
+    "./dist/vue.cjs"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "svelte": ">=4",
+    "vite": ">=5",
+    "vue": ">=3.3"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
   }
 }
