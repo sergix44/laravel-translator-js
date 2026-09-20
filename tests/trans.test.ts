@@ -106,3 +106,19 @@ test('trans works with capitalization uppercase', async () => {
 
     expect(r).toBe('The EMAIL must be accepted.')
 })
+
+test('a JSON key containing a dot resolves instead of being split into a path', async () => {
+    setLocale('pt', null)
+
+    // tests/fixtures/lang/pt.json keys this translation as the literal string "foo.bar".
+    expect(trans('foo.bar').value).toBe('baz')
+})
+
+test('a dotted JSON key still falls back to the key when it has no translation', async () => {
+    expect(trans('no.such.key').value).toBe('no.such.key')
+})
+
+test('nested PHP lookups still resolve as paths', async () => {
+    expect(trans('domain.car.is_electric').value).toBe('Electric')
+    expect(trans('domain.car.foo.level1').value).toEqual({level2: 'barpt'})
+})

@@ -37,11 +37,19 @@ const getTranslation = (key: string, locale: string, translations: object) => {
         return translation
     }
 
+    // JSON translations are keyed by the source string, which routinely contains dots
+    // ("Get started.", "foo.bar"). Try an exact match before treating the key as a path,
+    // or such a key is split apart and can never resolve.
+    const json = translations[locale]?.json
+    if (json && Object.prototype.hasOwnProperty.call(json, key)) {
+        return json[key]
+    }
+
     // Try to get the translation from the json array
     try {
         return key
             .split('.')
-            .reduce((t, i) => t[i] || null, translations[locale].json)
+            .reduce((t, i) => t[i] || null, json)
     } catch (e) {
     }
 
