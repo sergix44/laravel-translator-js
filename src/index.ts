@@ -1,6 +1,5 @@
-import {translator} from './translator'
 import {createHandle, TranslationHandle} from './handle'
-import {resolveConfig} from './store'
+import {EMPTY_REPLACEMENTS, translateValue} from './translate'
 
 export {getLocale, setLocale, setTranslations, onLocaleChange} from './store'
 export type {LocaleState, LocaleChangeListener} from './store'
@@ -19,17 +18,22 @@ export type {TranslationHandle, TranslationValue} from './handle'
 const snapshotReplacements = (replace: object): object =>
     Object.keys(replace).length > 0 ? {...replace} : replace
 
-const trans = (key: string, replace: object = {}, locale?: string): TranslationHandle => {
+const trans = (key: string, replace: object = EMPTY_REPLACEMENTS, locale?: string): TranslationHandle => {
     const replacements = snapshotReplacements(replace)
 
-    return createHandle(() => translator(key, replacements, false, resolveConfig(locale)))
+    return createHandle(() => translateValue(key, replacements, locale))
 }
 
 /** Translate a key with pluralization driven by `number`. */
-const transChoice = (key: string, number: number, replace: object = {}, locale?: string): TranslationHandle => {
+const transChoice = (
+    key: string,
+    number: number,
+    replace: object = EMPTY_REPLACEMENTS,
+    locale?: string,
+): TranslationHandle => {
     const replacements = {...replace, count: number}
 
-    return createHandle(() => translator(key, replacements, true, resolveConfig(locale)))
+    return createHandle(() => translateValue(key, replacements, locale, true))
 }
 
 const __ = trans

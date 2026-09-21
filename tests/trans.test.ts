@@ -1,7 +1,9 @@
 import {beforeEach, expect, test, vi} from "vitest";
-import {getLocale, onLocaleChange, setLocale, trans, trans_choice} from "../src";
+import initialTranslations from 'virtual-laravel-translations'
+import {getLocale, onLocaleChange, setLocale, setTranslations, trans, trans_choice} from "../src";
 
 beforeEach(() => {
+    setTranslations(initialTranslations)
     setLocale('en', null)
 });
 
@@ -75,6 +77,16 @@ test('setLocale notifies framework-agnostic subscribers', () => {
     setLocale('en')
 
     expect(listener).toHaveBeenCalledOnce()
+})
+
+test('onLocaleChange ignores translation catalogue updates', () => {
+    const listener = vi.fn()
+    const unsubscribe = onLocaleChange(listener)
+
+    setTranslations(structuredClone(initialTranslations))
+
+    expect(listener).not.toHaveBeenCalled()
+    unsubscribe()
 })
 
 test('specifying locale works', async () => {

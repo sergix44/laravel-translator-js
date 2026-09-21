@@ -1,20 +1,23 @@
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {getVersion, onInvalidate} from './reactivity'
 import {getLocale, onLocaleChange, type LocaleState} from './store'
-import {trans, transChoice} from './index'
+import {translateChoiceValue, translateValue} from './translate'
+import {stringifyTranslation} from './value'
 
 /**
  * React cannot render the handle object itself — `<p>{trans('x')}</p>` throws
  * "Objects are not valid as a React child" — so these hooks hand back plain strings and
- * re-render the component when the locale changes.
+ * re-render the component when the locale or translation catalogue changes.
  */
 
-const subscribe = (onStoreChange: () => void) => onLocaleChange(onStoreChange)
+const subscribeToLocale = (onStoreChange: () => void) => onLocaleChange(onStoreChange)
+const subscribeToChanges = (onStoreChange: () => void) => onInvalidate(onStoreChange)
 
 /** The active locale. Re-renders the component whenever it changes. */
 export const useLocale = (): Readonly<LocaleState> =>
     // getLocale returns a cached snapshot, so it is safe as both client and server
     // snapshot: an unstable identity here would loop forever.
-    useSyncExternalStore(subscribe, getLocale, getLocale)
+    useSyncExternalStore(subscribeToLocale, getLocale, getLocale)
 
 export interface Translator {
     trans: (key: string, replace?: object, locale?: string) => string
@@ -32,17 +35,21 @@ export interface Translator {
  *   return <h1>{__('page.title')}</h1>
  */
 export const useTranslator = (): Translator => {
-    const locale = useLocale()
+    // Unlike the locale snapshot, this revision also changes when Vite installs a new
+    // translation catalogue while preserving component state.
+    const revision = useSyncExternalStore(subscribeToChanges, getVersion, getVersion)
+    const locale = getLocale()
 
     const translate = useCallback(
-        (key: string, replace?: object, forLocale?: string) => String(trans(key, replace, forLocale)),
-        [locale],
+        (key: string, replace?: object, forLocale?: string) =>
+            stringifyTranslation(translateValue(key, replace, forLocale)),
+        [locale, revision],
     )
 
     const translateChoice = useCallback(
         (key: string, number: number, replace?: object, forLocale?: string) =>
-            String(transChoice(key, number, replace, forLocale)),
-        [locale],
+            stringifyTranslation(translateChoiceValue(key, number, replace, forLocale)),
+        [locale, revision],
     )
 
     return useMemo(() => ({

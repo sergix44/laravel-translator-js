@@ -153,10 +153,11 @@ import {setLocale, useLocale} from 'laravel-translator/vue'
 
 setLocale('it')
 
-// Given a ref, setLocale also keeps the two in sync, so later writes to the
-// ref change the locale as well. It returns a function that stops watching.
+// Given a ref, setLocale binds it in both directions: ref writes change the
+// shared locale, and setLocale calls elsewhere update the ref. It returns a
+// function that stops the binding.
 const locale = ref('it')
-const stop = setLocale(locale)
+const dispose = setLocale(locale)
 
 const current = useLocale() // computed<{locale, fallbackLocale}>
 ```

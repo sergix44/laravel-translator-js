@@ -24,6 +24,7 @@ export interface SharedState {
     version: number
     adapters: Set<ReactivityAdapter>
     listeners: Set<() => void>
+    localeListeners: Set<(state: Readonly<LocaleState>) => void>
     locale: string
     fallbackLocale: string | null
     translations: object
@@ -37,6 +38,7 @@ const create = (): SharedState => ({
     version: 0,
     adapters: new Set(),
     listeners: new Set(),
+    localeListeners: new Set(),
     locale: 'en',
     fallbackLocale: null,
     translations: {},
@@ -47,3 +49,7 @@ const create = (): SharedState => ({
 const container = globalThis as Record<symbol, SharedState | undefined>
 
 export const shared: SharedState = container[KEY] ??= create()
+
+// Keep hot updates and prerelease upgrades safe when an older state object is already
+// anchored on globalThis.
+shared.localeListeners ??= new Set()

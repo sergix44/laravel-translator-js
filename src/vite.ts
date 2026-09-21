@@ -1,6 +1,6 @@
 import * as path from 'path'
 import {Plugin} from 'vite'
-import {exportTranslations} from "./exporter";
+import {exportTranslations, invalidateTranslationFile} from './exporter.js'
 
 export interface VitePluginOptionsInterface {
     langPath?: string
@@ -49,7 +49,36 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
         },
         load(id) {
             if (id === resolvedVirtualModuleId) {
-                return `export default ${JSON.stringify(exportTranslations(...paths))}`
+                const translations = JSON.stringify(exportTranslations(...paths))
+
+                return `
+const translations = ${translations}
+const listeners = import.meta.hot?.data?.listeners ?? new Set()
+
+export const onTranslationsUpdate = (listener) => {
+    if (!import.meta.hot) return () => {}
+
+    listeners.add(listener)
+    return () => listeners.delete(listener)
+}
+
+if (import.meta.hot) {
+    if (import.meta.hot.data) import.meta.hot.data.listeners = listeners
+    import.meta.hot.accept((nextModule) => {
+        if (!nextModule) return
+
+        for (const listener of listeners) {
+            try {
+                listener(nextModule.default)
+            } catch (error) {
+                console.error('[laravel-translator] a translation update listener threw', error)
+            }
+        }
+    })
+}
+
+export default translations
+`
             }
             return null
         },
@@ -60,6 +89,8 @@ export default function laravelTranslator(options: string | VitePluginOptionsInt
             if (!isTranslationFile(ctx.file)) {
                 return
             }
+
+            invalidateTranslationFile(ctx.file)
 
             const virtualModule = ctx.server.moduleGraph.getModuleById(resolvedVirtualModuleId)
             if (!virtualModule) {

@@ -1,7 +1,9 @@
 import {beforeEach, expect, test, vi} from 'vitest'
-import {setLocale, trans, trans_choice} from '../src'
+import initialTranslations from 'virtual-laravel-translations'
+import {setLocale, setTranslations, trans, trans_choice} from '../src'
 
 beforeEach(() => {
+    setTranslations(initialTranslations)
     setLocale('en', null)
 })
 
@@ -84,6 +86,36 @@ test('subscribe dedupes on the value, so an unchanged translation is not reporte
     expect(run).toHaveBeenCalledTimes(1)
 
     unsubscribe()
+})
+
+test('a catalogue update only emits handles whose rendered value changed', () => {
+    const changed = vi.fn()
+    const unchanged = vi.fn()
+    const stopChanged = trans('Welcome!').subscribe(changed)
+    const stopUnchanged = trans('auth.failed').subscribe(unchanged)
+    const updated = structuredClone(initialTranslations) as {
+        en: {json: Record<string, string>}
+    }
+
+    updated.en.json['Welcome!'] = 'Updated without a reload'
+    setTranslations(updated)
+
+    expect(changed).toHaveBeenCalledTimes(2)
+    expect(changed).toHaveBeenLastCalledWith('Updated without a reload')
+    expect(unchanged).toHaveBeenCalledTimes(1)
+
+    stopChanged()
+    stopUnchanged()
+})
+
+test('installing the same catalogue object twice does not invalidate handles', () => {
+    const run = vi.fn()
+    const stop = trans('Welcome!').subscribe(run)
+
+    setTranslations(initialTranslations)
+
+    expect(run).toHaveBeenCalledTimes(1)
+    stop()
 })
 
 test('trans_choice returns a handle that pluralizes reactively', () => {

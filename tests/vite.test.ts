@@ -11,6 +11,15 @@ const getHook = (hook: unknown) => {
 }
 
 describe('Vite plugin', () => {
+    test('the virtual module accepts hot updates and publishes the new catalogue', () => {
+        const plugin = laravelTranslator({langPath: 'tests/fixtures/lang'})
+        const source = getHook(plugin.load).call({}, '\0virtual-laravel-translations')
+
+        expect(source).toContain('export const onTranslationsUpdate')
+        expect(source).toContain('import.meta.hot.accept(')
+        expect(source).toContain('listener(nextModule.default)')
+    })
+
     test('watches all configured translation paths', () => {
         const plugin = laravelTranslator({
             langPath: 'tests/fixtures/lang',

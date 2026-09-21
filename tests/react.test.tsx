@@ -2,10 +2,12 @@
 import {StrictMode, memo} from 'react'
 import {act, cleanup, render, screen} from '@testing-library/react'
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
-import {getLocale, setLocale, trans} from '../src'
+import initialTranslations from 'virtual-laravel-translations'
+import {getLocale, setLocale, setTranslations, trans} from '../src'
 import {useLocale, useTranslator} from '../src/react'
 
 beforeEach(() => {
+    setTranslations(initialTranslations)
     setLocale('en', null)
 })
 
@@ -50,6 +52,19 @@ test('useTranslator renders translations and updates on locale change', () => {
     act(() => setLocale('pt'))
 
     expect(screen.getByRole('heading').textContent).toBe('Bem-vindo!')
+})
+
+test('useTranslator updates when the catalogue changes without changing locale', () => {
+    const Title = () => <h1>{useTranslator().__('Welcome!')}</h1>
+
+    render(<Title/>)
+
+    act(() => setTranslations({
+        en: {json: {'Welcome!': 'Updated without a reload'}},
+    }))
+
+    expect(screen.getByRole('heading').textContent).toBe('Updated without a reload')
+    expect(getLocale().locale).toBe('en')
 })
 
 test('useTranslator works under StrictMode double-rendering', () => {
@@ -104,6 +119,20 @@ test('useLocale reports the active locale', () => {
     act(() => setLocale('pt-BR'))
 
     expect(screen.getByTestId('locale').textContent).toBe('pt_BR')
+})
+
+test('a locale-only consumer does not re-render for catalogue updates', () => {
+    let renders = 0
+    const Locale = () => {
+        renders++
+
+        return <span>{useLocale().locale}</span>
+    }
+
+    render(<Locale/>)
+    act(() => setTranslations(structuredClone(initialTranslations)))
+
+    expect(renders).toBe(1)
 })
 
 test('an explicit locale pins the translation', () => {

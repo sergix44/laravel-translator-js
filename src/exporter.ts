@@ -1,7 +1,7 @@
 import {glob} from "glob";
-import {basename, sep, join} from "path";
+import {basename, sep, join, resolve} from "path";
 import {Engine, Return} from 'php-parser'
-import {writeFileSync, readFileSync} from "fs";
+import {writeFileSync, readFileSync, statSync} from "fs";
 
 interface CandidateTranslation {
     type: 'php' | 'json'
@@ -13,6 +13,20 @@ interface CandidateTranslation {
 }
 
 const engine = new Engine({})
+
+interface CachedTranslation {
+    mtimeMs: number
+    size: number
+    content: object | null
+}
+
+// PHP parsing dominates development rebuild time. Reuse parsed files that did not
+// change; catalogue assembly still starts from scratch, so file precedence stays exact.
+const fileCache = new Map<string, CachedTranslation>()
+
+export const invalidateTranslationFile = (file: string) => {
+    fileCache.delete(resolve(file))
+}
 
 export const exportTranslations = (...paths: string[]) => {
     const translationFiles: CandidateTranslation[] = []
@@ -81,20 +95,46 @@ const getTranslationCandidates = (pattern: string, path: string, type: 'php' | '
 }
 
 const importJsonFile = (basePath: string, file: CandidateTranslation): object => {
-    const content = readFileSync(join(basePath, file.path)).toString()
-    return JSON.parse(content)
+    // JSON parsing is cheap, and retaining another copy of a potentially large flat
+    // catalogue would cost more memory than the cache saves.
+    return JSON.parse(readFileSync(resolve(basePath, file.path)).toString())
 }
 
 const importPhpFile = (basePath: string, file: CandidateTranslation): object | null => {
-    const content = readFileSync(join(basePath, file.path)).toString()
-    const phpArray = engine.parseCode(content, basename(file.path))
-        .children.filter((child) => child.kind === 'return')[0] as Return
+    return importFile(basePath, file, (content) => {
+        const phpArray = engine.parseCode(content, basename(file.path))
+            .children.find((child) => child.kind === 'return') as Return | undefined
 
-    if (phpArray?.expr?.kind !== 'array') {
-        return null
+        if (phpArray?.expr?.kind !== 'array') {
+            return null
+        }
+
+        return parseExpr(phpArray.expr)
+    })
+}
+
+const importFile = (
+    basePath: string,
+    file: CandidateTranslation,
+    parse: (content: string) => object | null,
+): object | null => {
+    const absolutePath = resolve(basePath, file.path)
+    const stats = statSync(absolutePath)
+    const cached = fileCache.get(absolutePath)
+
+    if (cached && cached.mtimeMs === stats.mtimeMs && cached.size === stats.size) {
+        return cached.content
     }
 
-    return parseExpr(phpArray.expr)
+    const content = parse(readFileSync(absolutePath).toString())
+
+    fileCache.set(absolutePath, {
+        mtimeMs: stats.mtimeMs,
+        size: stats.size,
+        content,
+    })
+
+    return content
 }
 
 const parseExpr = (expr) => {
@@ -124,5 +164,8 @@ const parseExpr = (expr) => {
 }
 
 export const saveJsonFile = (path: string, content: object) => {
-    writeFileSync(join(path, 'translations.json'), JSON.stringify(content))
+    const file = join(path, 'translations.json')
+
+    writeFileSync(file, JSON.stringify(content))
+    invalidateTranslationFile(file)
 }

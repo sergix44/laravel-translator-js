@@ -1,7 +1,7 @@
 import {getVersion, onInvalidate, track} from './reactivity'
+import {stringifyTranslation, type TranslationValue} from './value'
 
-/** A translation lookup can resolve to a string or, for a partial key path, to a subtree. */
-export type TranslationValue = string | Record<string, unknown>
+export type {TranslationValue} from './value'
 
 /**
  * A live translation. Reading it re-evaluates against the current locale, so the value is
@@ -28,9 +28,6 @@ export interface TranslationHandle {
     [Symbol.toPrimitive](hint: string): string | number
 }
 
-const stringify = (value: TranslationValue) =>
-    typeof value === 'string' ? value : JSON.stringify(value)
-
 export const createHandle = (compute: () => TranslationValue): TranslationHandle => {
     let memo: TranslationValue
     let memoVersion = -1
@@ -49,7 +46,7 @@ export const createHandle = (compute: () => TranslationValue): TranslationHandle
         return memo
     }
 
-    const asString = () => stringify(read())
+    const asString = () => stringifyTranslation(read())
 
     return {
         get value() {

@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import {mount} from '@vue/test-utils'
-import {computed, effect, nextTick, stop} from 'vue'
+import {computed, defineComponent, effect, h, nextTick, stop} from 'vue'
 import {beforeEach, expect, test} from 'vitest'
-import {setLocale} from '../src'
-import {__, trans, trans_choice, transChoice} from '../src/vue'
+import initialTranslations from 'virtual-laravel-translations'
+import {setLocale, setTranslations} from '../src'
+import {__, setLocale as setVueLocale, trans, trans_choice, transChoice} from '../src/vue'
 import StringTrans from './components/StringTrans.vue'
 
 beforeEach(() => {
+    setTranslations(initialTranslations)
     setLocale('en', null)
 })
 
@@ -76,6 +78,42 @@ test('interpolation and pluralization render through the adapter', async () => {
     await nextTick()
 
     expect(wrapper.get('[data-testid="title"]').text()).toBe('Bem-vindo!')
+
+    wrapper.unmount()
+})
+
+test('changing locale in one component updates translation users in sibling components', async () => {
+    const Switcher = defineComponent({
+        setup: () => () => h('button', {
+            'data-testid': 'switcher',
+            onClick: () => setVueLocale('pt'),
+        }, __('Welcome!')),
+    })
+    const Sibling = defineComponent({
+        setup: () => () => h('p', {'data-testid': 'sibling'}, __('Welcome!')),
+    })
+    const App = defineComponent({
+        setup: () => () => h('main', [h(Switcher), h(Sibling)]),
+    })
+    const wrapper = mount(App)
+
+    await wrapper.get('[data-testid="switcher"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="switcher"]').text()).toBe('Bem-vindo!')
+    expect(wrapper.get('[data-testid="sibling"]').text()).toBe('Bem-vindo!')
+
+    wrapper.unmount()
+})
+
+test('catalogue updates refresh Vue strings without changing locale', async () => {
+    const wrapper = mount(StringTrans)
+
+    setTranslations({en: {json: {'Welcome!': 'Updated without a reload'}}})
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="title"]').text()).toBe('Updated without a reload')
+    expect(wrapper.get('[data-testid="input"]').attributes('placeholder')).toBe('Updated without a reload')
 
     wrapper.unmount()
 })

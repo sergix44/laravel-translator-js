@@ -4,7 +4,7 @@ import type {TranslationHandle, TranslationValue} from './handle'
 export type Disposer = () => void
 
 /**
- * Run `fn` now and again after every locale change. Returns a disposer.
+ * Run `fn` now and again after every locale or catalogue change. Returns a disposer.
  *
  * This replaces hand-rolling `onLocaleChange(render); render()`.
  */

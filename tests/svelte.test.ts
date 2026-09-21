@@ -2,7 +2,8 @@
 import {cleanup, fireEvent, render, screen} from '@testing-library/svelte'
 import {tick} from 'svelte'
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
-import {getLocale, setLocale, trans} from '../src'
+import initialTranslations from 'virtual-laravel-translations'
+import {getLocale, setLocale, setTranslations, trans} from '../src'
 import {__, fallbackLocale, locale, localeState} from '../src/svelte'
 import Title from './components/Title.svelte'
 import HandleStore from './components/HandleStore.svelte'
@@ -12,6 +13,7 @@ import LocalePicker from './components/LocalePicker.svelte'
 import SvelteParent from './components/SvelteParent.svelte'
 
 beforeEach(() => {
+    setTranslations(initialTranslations)
     setLocale('en', null)
 })
 
@@ -31,6 +33,16 @@ test('a component using the $ store prefix re-renders on locale change', async (
 
     expect(screen.getByTestId('title').textContent).toBe('Bem-vindo!')
     expect(screen.getByTestId('greeting').textContent).toBe('Bem-vindo, John!')
+})
+
+test('a component updates when the catalogue changes without changing locale', async () => {
+    render(Title)
+
+    setTranslations({en: {json: {'Welcome!': 'Updated without a reload'}}})
+    await tick()
+
+    expect(screen.getByTestId('title').textContent).toBe('Updated without a reload')
+    expect(getLocale().locale).toBe('en')
 })
 
 test('a handle is itself a store, usable with $ directly', async () => {
@@ -125,6 +137,23 @@ test('the translate store emits a fresh function identity per change', () => {
     unsubscribe()
 })
 
+test('translate store subscribers share one function instance per update', () => {
+    const first: unknown[] = []
+    const second: unknown[] = []
+    const stopFirst = __.subscribe((fn) => first.push(fn))
+    const stopSecond = __.subscribe((fn) => second.push(fn))
+
+    expect(first[0]).toBe(second[0])
+
+    setLocale('pt')
+
+    expect(first[1]).toBe(second[1])
+    expect(first[1]).not.toBe(first[0])
+
+    stopFirst()
+    stopSecond()
+})
+
 test('stores emit synchronously on subscribe, as SvelteKit SSR requires', () => {
     // SSR does subscribe -> read -> unsubscribe in one tick, with no chance to await.
     let value: string | undefined
@@ -158,6 +187,16 @@ test('the locale store is a readable and writable string', () => {
     expect(getLocale().locale).toBe('pt_BR')
     expect(seen).toEqual(['en', 'pt_BR'])
 
+    unsubscribe()
+})
+
+test('locale stores do not emit for translation-only updates', () => {
+    const seen: string[] = []
+    const unsubscribe = locale.subscribe((value) => seen.push(value))
+
+    setTranslations(structuredClone(initialTranslations))
+
+    expect(seen).toEqual(['en'])
     unsubscribe()
 })
 

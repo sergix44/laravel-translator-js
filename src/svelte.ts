@@ -1,6 +1,7 @@
 import {onInvalidate} from './reactivity'
-import {getLocale, setLocale, type LocaleState} from './store'
-import {trans as baseTrans, transChoice as baseTransChoice} from './index'
+import {getLocale, onLocaleChange, setLocale, type LocaleState} from './store'
+import {translateChoiceValue, translateValue} from './translate'
+import {stringifyTranslation} from './value'
 
 /**
  * Svelte adapter.
@@ -24,24 +25,79 @@ export type TranslateFn = (key: string, replace?: object, locale?: string) => st
 export type TranslateChoiceFn = (key: string, number: number, replace?: object, locale?: string) => string
 
 /**
- * A store whose value is a freshly-identified function on every locale change.
+ * A store whose value is a freshly-identified function on every reactive change.
  *
  * The new identity matters: Svelte 5 compares store values with `===`, so re-emitting the
  * same function reference would not invalidate the template.
  */
-const functionStore = <T extends Function>(build: () => T): Readable<T> => ({
-    subscribe(run: Subscriber<T>) {
-        run(build())
+type ChangeSubscriber = (listener: () => void) => Unsubscriber
 
-        return onInvalidate(() => run(build()))
-    },
-})
+/** One upstream listener per store, regardless of how many components subscribe. */
+const sharedStore = <T>(read: () => T, subscribeToChanges: ChangeSubscriber): Readable<T> => {
+    const subscribers = new Set<{run: Subscriber<T>}>()
+    let current: T
+    let stop: Unsubscriber | null = null
+
+    const update = () => {
+        const next = read()
+        if (Object.is(next, current)) {
+            return
+        }
+
+        current = next
+        Array.from(subscribers).forEach((subscription) => {
+            try {
+                subscription.run(current)
+            } catch (error) {
+                console.error('[laravel-translator] a Svelte subscriber threw', error)
+            }
+        })
+    }
+
+    return {
+        subscribe(run: Subscriber<T>) {
+            if (subscribers.size === 0) {
+                current = read()
+                stop = subscribeToChanges(update)
+            }
+
+            const subscription = {run}
+            subscribers.add(subscription)
+
+            try {
+                run(current)
+            } catch (error) {
+                subscribers.delete(subscription)
+
+                if (subscribers.size === 0) {
+                    stop?.()
+                    stop = null
+                }
+
+                throw error
+            }
+
+            return () => {
+                subscribers.delete(subscription)
+
+                if (subscribers.size === 0) {
+                    stop?.()
+                    stop = null
+                }
+            }
+        },
+    }
+}
+
+const functionStore = <T extends Function>(build: () => T): Readable<T> =>
+    sharedStore(build, onInvalidate)
 
 const buildTranslate = (): TranslateFn =>
-    (key, replace, locale) => String(baseTrans(key, replace, locale))
+    (key, replace, locale) => stringifyTranslation(translateValue(key, replace, locale))
 
 const buildTranslateChoice = (): TranslateChoiceFn =>
-    (key, number, replace, locale) => String(baseTransChoice(key, number, replace, locale))
+    (key, number, replace, locale) =>
+        stringifyTranslation(translateChoiceValue(key, number, replace, locale))
 
 /** `{$__('page.title')}` */
 export const __: Readable<TranslateFn> = functionStore(buildTranslate)
@@ -64,17 +120,17 @@ export interface Writable<T> extends Readable<T> {
     update(updater: (value: T) => T): void
 }
 
-const writableStore = <T>(read: () => T, write: (value: T) => void): Writable<T> => ({
-    subscribe(run: Subscriber<T>) {
-        run(read())
+const writableStore = <T>(read: () => T, write: (value: T) => void): Writable<T> => {
+    const readable = sharedStore(read, (notify) => onLocaleChange(notify))
 
-        return onInvalidate(() => run(read()))
-    },
-    set: write,
-    update(updater) {
-        write(updater(read()))
-    },
-})
+    return {
+        ...readable,
+        set: write,
+        update(updater) {
+            write(updater(read()))
+        },
+    }
+}
 
 /**
  * The active locale as a string, so it round-trips through a form control:
@@ -93,10 +149,5 @@ export const fallbackLocale: Writable<string | null> = writableStore(
 )
 
 /** The whole locale state, for when you need both values at once. */
-export const localeState: Readable<Readonly<LocaleState>> = {
-    subscribe(run: Subscriber<Readonly<LocaleState>>) {
-        run(getLocale())
-
-        return onInvalidate(() => run(getLocale()))
-    },
-}
+export const localeState: Readable<Readonly<LocaleState>> =
+    sharedStore(getLocale, (notify) => onLocaleChange(notify))

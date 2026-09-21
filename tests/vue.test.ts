@@ -1,7 +1,7 @@
-import {effect, nextTick, ref, stop} from 'vue'
+import {effect, effectScope, nextTick, ref, stop} from 'vue'
 import {toDisplayString} from '@vue/shared'
 import {beforeEach, expect, test} from 'vitest'
-import {setLocale as setGlobalLocale, trans} from '../src'
+import {getLocale, setLocale as setGlobalLocale, trans} from '../src'
 import {setLocale, useLocale} from '../src/vue'
 
 beforeEach(() => {
@@ -70,7 +70,7 @@ test("Vue's template renderer prints the translation, not a JSON blob", () => {
 
 test('setLocale drives the global locale from a Vue ref', () => {
     const locale = ref('en')
-    const stopSync = setLocale(locale)
+    const dispose = setLocale(locale)
 
     let rendered = ''
     const renderEffect = effect(() => {
@@ -83,18 +83,68 @@ test('setLocale drives the global locale from a Vue ref', () => {
 
     expect(rendered).toBe('Bem-vindo!')
 
-    stopSync()
+    dispose()
     stop(renderEffect)
 })
 
-test('setLocale stops writing to the store once disposed', () => {
-    const locale = ref('en')
-    const stopSync = setLocale(locale)
+test('setLocale reflects global locale changes in every bound Vue ref', () => {
+    const first = ref('en')
+    const second = ref('en')
+    const disposeFirst = setLocale(first)
+    const disposeSecond = setLocale(second)
 
-    stopSync()
+    first.value = 'pt-BR'
+
+    expect(getLocale()).toEqual({locale: 'pt_BR', fallbackLocale: null})
+    expect(first.value).toBe('pt_BR')
+    expect(second.value).toBe('pt_BR')
+
+    setGlobalLocale('en')
+
+    expect(first.value).toBe('en')
+    expect(second.value).toBe('en')
+
+    disposeFirst()
+    disposeSecond()
+})
+
+test('setLocale updates bound locale and fallback refs atomically', () => {
+    const locale = ref('en')
+    const fallback = ref<string | null>(null)
+    const dispose = setLocale(locale, fallback)
+
+    setGlobalLocale('pt-BR', 'fr-FR')
+
+    expect(locale.value).toBe('pt_BR')
+    expect(fallback.value).toBe('fr_FR')
+    expect(getLocale()).toEqual({locale: 'pt_BR', fallbackLocale: 'fr_FR'})
+
+    dispose()
+})
+
+test('setLocale stops both directions of the binding once disposed', () => {
+    const locale = ref('en')
+    const dispose = setLocale(locale)
+
+    dispose()
     locale.value = 'pt'
 
     expect(String(trans('Welcome!'))).toBe('Wecome!')
+
+    setGlobalLocale('fr')
+
+    expect(locale.value).toBe('pt')
+})
+
+test('setLocale releases ref bindings with their Vue effect scope', () => {
+    const scope = effectScope()
+    const locale = ref('en')
+
+    scope.run(() => setLocale(locale))
+    scope.stop()
+    setGlobalLocale('pt')
+
+    expect(locale.value).toBe('en')
 })
 
 test('useLocale exposes the active locale as a computed', async () => {

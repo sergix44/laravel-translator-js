@@ -1,8 +1,6 @@
-import type {Config} from './translator'
-import {invalidate, onInvalidate} from './reactivity'
+import {invalidate, onLocaleChange} from './reactivity'
 import {shared} from './shared'
-// @ts-ignore
-import translations from 'virtual-laravel-translations'
+import translations, {onTranslationsUpdate} from 'virtual-laravel-translations'
 
 declare global {
     interface Window {
@@ -36,12 +34,9 @@ if (!shared.initialized) {
  */
 export const getLocale = (): Readonly<LocaleState> => shared.snapshot
 
-/** The config handed to the pure `translator()`, optionally pinned to one locale. */
-export const resolveConfig = (locale?: string): Config => ({
-    locale: (locale && normalize(locale)) || shared.locale,
-    fallbackLocale: shared.fallbackLocale,
-    translations: shared.translations,
-})
+/** Resolve an optional per-call locale without allocating a translation config object. */
+export const resolveLocale = (locale?: string): string =>
+    (locale && normalize(locale)) || shared.locale
 
 /**
  * Change the active locale and invalidate every live translation.
@@ -62,16 +57,27 @@ export const setLocale = (locale: string, fallbackLocale?: string | null) => {
     shared.fallbackLocale = nextFallbackLocale
     shared.snapshot = {locale: nextLocale, fallbackLocale: nextFallbackLocale}
 
-    invalidate()
+    invalidate(true)
 }
 
 /** Replace the translation catalogue. Used by the Vite plugin on hot reload. */
 export const setTranslations = (next: object) => {
-    shared.translations = next ?? {}
+    const translations = next ?? {}
+
+    // More than one bundled copy may subscribe to the virtual module. Every callback
+    // receives the same object, so only the first one should invalidate the app.
+    if (shared.translations === translations) {
+        return
+    }
+
+    shared.translations = translations
 
     invalidate()
 }
 
 /** Raw locale-change event, for consumers that want the state rather than a handle. */
-export const onLocaleChange = (listener: LocaleChangeListener) =>
-    onInvalidate(() => listener(shared.snapshot))
+export {onLocaleChange}
+
+// In development, the virtual module is the HMR boundary. It installs a fresh catalogue
+// here instead of invalidating the store module and propagating a full-page reload.
+onTranslationsUpdate(setTranslations)
