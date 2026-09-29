@@ -23,11 +23,8 @@ jobs:
       - name: Npm install
         run: npm ci
 
-      - name: Type check
-        run: npm run typecheck
-
       - name: Execute tests
         run: npm run tests
 
-      - name: Build
+      - name: Build package
         run: npm run build

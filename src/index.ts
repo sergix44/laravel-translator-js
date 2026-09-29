@@ -1,43 +1,93 @@
-import {createHandle, TranslationHandle} from './handle'
-import {EMPTY_REPLACEMENTS, translateValue} from './translate'
+import {Config, translator} from './translator'
+import {getTranslations, onTranslationsChange, trackTranslationRead} from './catalogue'
 
-export {getLocale, setLocale, setTranslations, onLocaleChange} from './store'
-export type {LocaleState, LocaleChangeListener} from './store'
-export {registerReactivityAdapter} from './reactivity'
-export type {ReactivityAdapter} from './reactivity'
-export type {TranslationHandle, TranslationValue} from './handle'
-
-/**
- * Translate a key. Returns a live handle rather than a string: reading it always reflects
- * the current locale, and it coerces to a string wherever one is expected.
- */
-/**
- * Copied because the handle is lazy: without this, mutating the caller's object after
- * calling trans() would silently change the translation at the next locale change.
- */
-const snapshotReplacements = (replace: object): object =>
-    Object.keys(replace).length > 0 ? {...replace} : replace
-
-const trans = (key: string, replace: object = EMPTY_REPLACEMENTS, locale?: string): TranslationHandle => {
-    const replacements = snapshotReplacements(replace)
-
-    return createHandle(() => translateValue(key, replacements, locale))
+declare global {
+    interface Window {
+        locale?: string;
+        fallbackLocale?: string;
+    }
 }
 
-/** Translate a key with pluralization driven by `number`. */
-const transChoice = (
-    key: string,
-    number: number,
-    replace: object = EMPTY_REPLACEMENTS,
-    locale?: string,
-): TranslationHandle => {
-    const replacements = {...replace, count: number}
+const isServer = typeof window === 'undefined'
 
-    return createHandle(() => translateValue(key, replacements, locale, true))
+const defaultConfig: Config = {
+    locale: !isServer && document.documentElement.lang ? document.documentElement.lang.replace(/-/g, '_') : 'en',
+    fallbackLocale: !isServer && window ? window?.fallbackLocale?.replace(/-/g, '_') : null,
+    translations: getTranslations(),
 }
 
-const __ = trans
-const t = trans
-const trans_choice = transChoice
+onTranslationsChange((translations) => {
+    defaultConfig.translations = translations
+})
 
-export {trans, __, t, transChoice, trans_choice}
+export interface LocaleState {
+    locale: string
+    fallbackLocale: string | null
+}
+
+export type LocaleChangeListener = (state: Readonly<LocaleState>) => void
+
+const localeListeners = new Set<LocaleChangeListener>()
+
+const getLocale = (): LocaleState => ({
+    locale: defaultConfig.locale,
+    fallbackLocale: defaultConfig.fallbackLocale,
+})
+
+const onLocaleChange = (listener: LocaleChangeListener) => {
+    localeListeners.add(listener)
+    return () => localeListeners.delete(listener)
+}
+
+const trans = (key: string, replace: object = {}, locale: string = null, config: Config = null) => {
+    trackTranslationRead()
+
+    if (locale) {
+        if (!config) {
+            config = {...defaultConfig}
+        }
+        config.locale = locale
+    }
+
+    return translator(key, replace, false, config ?? defaultConfig)
+}
+
+const transChoice = (key: string, number: number, replace: Object = {}, locale: string = null, config: Config = null) => {
+    trackTranslationRead()
+
+    if (locale) {
+        if (!config) {
+            config = {...defaultConfig}
+        }
+        config.locale = locale
+    }
+
+    return translator(key, {...replace, count: number}, true, config ?? defaultConfig)
+}
+
+const setLocale = (locale: string, fallbackLocale: string | null = null) => {
+    const nextLocale = locale?.replace(/-/g, '_') ?? 'en'
+    const nextFallbackLocale = fallbackLocale?.replace(/-/g, '_') ?? null
+
+    if (defaultConfig.locale === nextLocale && defaultConfig.fallbackLocale === nextFallbackLocale) {
+        return
+    }
+
+    defaultConfig.locale = nextLocale
+    defaultConfig.fallbackLocale = nextFallbackLocale
+
+    const state = getLocale()
+    for (const listener of [...localeListeners]) {
+        try {
+            listener(state)
+        } catch (error) {
+            console.error('[laravel-translator] a locale change listener threw', error)
+        }
+    }
+}
+
+const __ = trans;
+const t = trans;
+const trans_choice = transChoice;
+
+export {trans, __, t, transChoice, trans_choice, getLocale, onLocaleChange, setLocale, onTranslationsChange}

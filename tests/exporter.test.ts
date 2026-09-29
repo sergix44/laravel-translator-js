@@ -1,6 +1,5 @@
 import {expect, test} from "vitest";
-import path from 'path'
-import {exportTranslations, invalidateTranslationFile} from "../src/exporter";
+import {exportTranslations} from "../src/exporter";
 
 
 test('exports simple locale', async () => {
@@ -86,17 +85,4 @@ test('exports complex locale', async () => {
             "de": {"json": {"auth.arr.0": "foo", "auth.arr.1": "bar"}}
         }
     )
-})
-
-test('reuses parsed files until Vite invalidates the changed file', () => {
-    const first = exportTranslations('./tests/fixtures/locales') as Record<string, any>
-    const second = exportTranslations('./tests/fixtures/locales') as Record<string, any>
-
-    expect(second.en.php.auth).toBe(first.en.php.auth)
-
-    invalidateTranslationFile(path.resolve('./tests/fixtures/locales/en/auth.php'))
-
-    const reparsed = exportTranslations('./tests/fixtures/locales') as Record<string, any>
-    expect(reparsed.en.php.auth).not.toBe(first.en.php.auth)
-    expect(reparsed.en.php.auth).toEqual(first.en.php.auth)
 })

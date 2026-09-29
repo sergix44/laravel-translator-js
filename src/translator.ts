@@ -1,66 +1,56 @@
 import {choose} from "./pluralizer";
-import type {TranslationValue} from './value'
 
-type TranslationTree = Record<string, unknown>
+export interface Config {
+    locale: string
+    fallbackLocale: string | null
+    translations: object
+}
 
-export const translator = (
-    key: string,
-    replace: object,
-    pluralize: boolean,
-    activeLocale: string,
-    activeFallbackLocale: string | null,
-    translations: object,
-): TranslationValue => {
-    const locale = activeLocale.toLowerCase()
-    const fallbackLocale = activeFallbackLocale?.toLowerCase()
+export const translator = (key: string, replace: object, pluralize: boolean, config: Config) => {
+    const locale = config?.locale?.toLowerCase() ?? 'en'
+    const fallbackLocale = config?.fallbackLocale?.toLowerCase()
 
     // Check if the key is a translation key
-    let translation = getTranslation(key, locale, translations)
+    let translation = getTranslation(key, locale, config.translations)
 
     // If not, check if the key is a translation key in the fallback locale
     if (!translation && fallbackLocale) {
-        translation = getTranslation(key, fallbackLocale, translations)
+        translation = getTranslation(key, fallbackLocale, config.translations)
     }
 
-    return translate(translation ?? key, replace, locale, pluralize) as TranslationValue
-}
-
-const getPath = (source: unknown, segments: string[]): TranslationValue | null => {
-    let value = source
-
-    for (const segment of segments) {
-        if (!value || typeof value !== 'object') {
-            return null
-        }
-
-        value = (value as TranslationTree)[segment]
-    }
-
-    return (value ?? null) as TranslationValue | null
+    return translate(translation ?? key, replace, locale, pluralize) as string
 }
 
 const getTranslation = (key: string, locale: string, translations: object) => {
-    const catalogue = (translations as TranslationTree)[locale] as TranslationTree | undefined
-    if (!catalogue) {
-        return null
-    }
+    let translation = null
 
-    const segments = key.split('.')
-    const translation = getPath(catalogue.php, segments)
+    // Try to get the translation from the php array
+    try {
+        translation = key
+            .split('.')
+            .reduce((t, i) => t[i] || null, translations[locale].php)
+    } catch (e) {
+    }
 
     if (translation) {
         return translation
     }
 
-    // JSON translations are keyed by the source string, which routinely contains dots
-    // ("Get started.", "foo.bar"). Try an exact match before treating the key as a path,
-    // or such a key is split apart and can never resolve.
-    const json = catalogue.json as TranslationTree | undefined
-    if (json && Object.prototype.hasOwnProperty.call(json, key)) {
-        return json[key] as TranslationValue
+    // JSON translation keys are literal strings and may contain dots.
+    const jsonTranslations = translations[locale]?.json
+    if (jsonTranslations && Object.prototype.hasOwnProperty.call(jsonTranslations, key)) {
+        return jsonTranslations[key]
     }
 
-    return getPath(json, segments)
+    // Keep support for nested JSON objects.
+    try {
+        return key
+            .split('.')
+            .reduce((t, i) => t[i] || null, jsonTranslations)
+    } catch (e) {
+    }
+
+    return translation
 }
 
 const translate = (translation: string | object, replace: object = {}, locale: string, shouldPluralize: boolean = false) => {
@@ -68,24 +58,14 @@ const translate = (translation: string | object, replace: object = {}, locale: s
         translation = choose(translation, replace['count'], locale);
     }
 
-    // A partial key path resolves to a subtree. Placeholder replacement is a string
-    // operation, so applying it here would stringify the subtree into "[object Object]".
-    if (typeof translation !== 'string') {
-        return translation
-    }
-
-    for (const key in replace) {
-        if (!Object.prototype.hasOwnProperty.call(replace, key)) {
-            continue
-        }
-
+    Object.keys(replace).forEach(key => {
         const value = replace[key]?.toString()
 
-        translation = translation
+        translation = translation.toString()
             .replace(':' + key, value)
             .replace(':' + key.charAt(0).toUpperCase() + key.slice(1), value.charAt(0).toUpperCase() + value.slice(1))
             .replace(':' + key.toUpperCase(), value.toUpperCase())
-    }
+    })
 
     return translation
 }
