@@ -36,11 +36,17 @@ const getTranslation = (key: string, locale: string, translations: object) => {
         return translation
     }
 
-    // Try to get the translation from the json array
+    // JSON translation keys are literal strings and may contain dots.
+    const jsonTranslations = translations[locale]?.json
+    if (jsonTranslations && Object.prototype.hasOwnProperty.call(jsonTranslations, key)) {
+        return jsonTranslations[key]
+    }
+
+    // Keep support for nested JSON objects.
     try {
         return key
             .split('.')
-            .reduce((t, i) => t[i] || null, translations[locale].json)
+            .reduce((t, i) => t[i] || null, jsonTranslations)
     } catch (e) {
     }
 

@@ -29,6 +29,17 @@ test('trans works with parameters', async () => {
     expect(r).toBe('Welcome, John!')
 })
 
+test('trans treats dotted JSON keys as literal strings', () => {
+    expect(trans('Get started.', {}, 'pt')).toBe('Comece.')
+    expect(trans('auth.arr.0', {}, 'de')).toBe('foo')
+})
+
+test('trans falls back for dotted JSON keys', () => {
+    setLocale('fr', 'pt')
+
+    expect(trans('Get started.')).toBe('Comece.')
+})
+
 test('trans works specifying locale', async () => {
     const r = trans('Welcome, :name!', {name: 'John'}, 'pt')
 
