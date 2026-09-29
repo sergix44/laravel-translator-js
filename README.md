@@ -180,6 +180,10 @@ render()
 const stop = onTranslationsChange(render) // Call stop() when the view is removed.
 ```
 
+If you also use `laravel-vite-plugin`, avoid `refresh: true`: its default refresh paths include `lang/**` and
+`resources/lang/**`, triggering a full page reload for translation edits. Set its `refresh` option to paths that need
+a reload, such as `['resources/views/**', 'routes/**']`, and let `laravelTranslator()` handle translation files.
+
 In production mode, the translations are parsed and bundled automatically when you run `npm run build`.
 
 ## ⚖️ License
