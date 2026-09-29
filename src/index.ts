@@ -1,18 +1,13 @@
 import {Config, translator} from './translator'
 import {getTranslations, onTranslationsChange, trackTranslationRead} from './catalogue'
 
-declare global {
-    interface Window {
-        locale?: string;
-        fallbackLocale?: string;
-    }
-}
-
-const isServer = typeof window === 'undefined'
+const root = typeof document !== 'undefined' ? document.documentElement : null
+const readLocale = () => root?.getAttribute('lang')?.replace(/-/g, '_') || 'en'
+const readFallbackLocale = () => root?.getAttribute('data-fallback-lang')?.replace(/-/g, '_') || null
 
 const defaultConfig: Config = {
-    locale: !isServer && document.documentElement.lang ? document.documentElement.lang.replace(/-/g, '_') : 'en',
-    fallbackLocale: !isServer && window ? window?.fallbackLocale?.replace(/-/g, '_') : null,
+    locale: readLocale(),
+    fallbackLocale: readFallbackLocale(),
     translations: getTranslations(),
 }
 
@@ -84,6 +79,18 @@ const setLocale = (locale: string, fallbackLocale: string | null = null) => {
             console.error('[laravel-translator] a locale change listener threw', error)
         }
     }
+}
+
+if (root && typeof MutationObserver !== 'undefined') {
+    new MutationObserver((mutations) => {
+        const changedLocale = mutations.some(({attributeName}) => attributeName === 'lang')
+        const changedFallback = mutations.some(({attributeName}) => attributeName === 'data-fallback-lang')
+        const current = getLocale()
+        setLocale(
+            changedLocale ? readLocale() : current.locale,
+            changedFallback ? readFallbackLocale() : current.fallbackLocale,
+        )
+    }).observe(root, {attributes: true, attributeFilter: ['lang', 'data-fallback-lang']})
 }
 
 const __ = trans;

@@ -8,12 +8,49 @@ import {setTranslations} from '../src/catalogue'
 import {__, fallbackLocale, locale, localeState, trans_choice} from '../src/svelte'
 import SvelteTranslations from './components/SvelteTranslations.svelte'
 
-beforeEach(() => {
+beforeEach(async () => {
+    document.documentElement.removeAttribute('lang')
+    document.documentElement.removeAttribute('data-fallback-lang')
+    await Promise.resolve()
     setTranslations(initialTranslations)
     setLocale('en', null)
 })
 
-afterEach(cleanup)
+afterEach(async () => {
+    cleanup()
+    document.documentElement.removeAttribute('lang')
+    document.documentElement.removeAttribute('data-fallback-lang')
+    await Promise.resolve()
+    setLocale('en', null)
+})
+
+test('html locale attributes update mounted Svelte translations and stores', async () => {
+    document.documentElement.lang = 'fr'
+    document.documentElement.setAttribute('data-fallback-lang', 'en')
+    await Promise.resolve()
+    render(SvelteTranslations)
+
+    expect(screen.getByTestId('title').textContent).toBe('Wecome!')
+
+    document.documentElement.setAttribute('data-fallback-lang', 'pt')
+    await Promise.resolve()
+    await tick()
+    expect(screen.getByTestId('title').textContent).toBe('Bem-vindo!')
+    expect(getLocale()).toEqual({locale: 'fr', fallbackLocale: 'pt'})
+
+    document.documentElement.lang = 'en'
+    await Promise.resolve()
+    await tick()
+    expect(screen.getByTestId('title').textContent).toBe('Wecome!')
+    expect((screen.getByTestId('select') as HTMLSelectElement).value).toBe('en')
+    expect(getLocale()).toEqual({locale: 'en', fallbackLocale: 'pt'})
+
+    document.documentElement.removeAttribute('data-fallback-lang')
+    await Promise.resolve()
+    await tick()
+    expect(screen.getByTestId('title').textContent).toBe('Wecome!')
+    expect(getLocale()).toEqual({locale: 'en', fallbackLocale: null})
+})
 
 test('locale changes update text, plural forms, attributes, and child props in a mounted component', async () => {
     render(SvelteTranslations)

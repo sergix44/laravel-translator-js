@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import {createRenderer, defineComponent, h, inject, nextTick, ref, type App} from 'vue'
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 import {getLocale, setLocale, trans} from '../src'
@@ -44,12 +45,58 @@ const renderer = createRenderer<HostNode, HostNode>({
 const renderedText = (node: HostNode): string =>
     node.text + node.children.map(renderedText).join('')
 
-beforeEach(() => {
+beforeEach(async () => {
+    document.documentElement.removeAttribute('lang')
+    document.documentElement.removeAttribute('data-fallback-lang')
+    await Promise.resolve()
     setLocale('en', null)
 })
 
-afterEach(() => {
+afterEach(async () => {
+    document.documentElement.removeAttribute('lang')
+    document.documentElement.removeAttribute('data-fallback-lang')
+    await Promise.resolve()
     setLocale('en', null)
+})
+
+test('Vue uses and follows the html locale attributes without plugin options', async () => {
+    document.documentElement.lang = 'fr'
+    document.documentElement.setAttribute('data-fallback-lang', 'en')
+    await Promise.resolve()
+
+    const Root = defineComponent({
+        render() {
+            return h('p', this.__('Welcome!'))
+        },
+    })
+    const container = createNode('root')
+    const app = renderer.createApp(Root)
+    app.use(LaravelTranslatorVue)
+    app.mount(container)
+
+    try {
+        expect(renderedText(container)).toBe('Wecome!')
+
+        document.documentElement.setAttribute('data-fallback-lang', 'pt')
+        await Promise.resolve()
+        await nextTick()
+        expect(renderedText(container)).toBe('Bem-vindo!')
+        expect(getLocale()).toEqual({locale: 'fr', fallbackLocale: 'pt'})
+
+        document.documentElement.lang = 'en'
+        await Promise.resolve()
+        await nextTick()
+        expect(renderedText(container)).toBe('Wecome!')
+        expect(getLocale()).toEqual({locale: 'en', fallbackLocale: 'pt'})
+
+        document.documentElement.removeAttribute('data-fallback-lang')
+        await Promise.resolve()
+        await nextTick()
+        expect(renderedText(container)).toBe('Wecome!')
+        expect(getLocale()).toEqual({locale: 'en', fallbackLocale: null})
+    } finally {
+        app.unmount()
+    }
 })
 
 test('every Vue component updates after setLocale, including injected and direct translator calls', async () => {

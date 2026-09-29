@@ -43,22 +43,13 @@ export default defineConfig({
 
 Run `npm run dev` to start the development server, or `npm run build` to build your assets for production.
 
-Remember to set the language in your `html`, for example in your `app.blade.php` file:
+Set the language and fallback language on the `html` element in your `app.blade.php` file:
 
 ```html
-
-<html lang="{{ app()->getLocale() }}">
+<html lang="{{ app()->getLocale() }}" data-fallback-lang="{{ config('app.fallback_locale') }}">
 ```
 
-If you want to also pass the fallback locale to your frontend code, you can do so by adding the following line to your
-`app.blade.php` file:
-
-```html
-
-<script>
-    window.fallbackLocale = "{{ config('app.fallback_locale') }}"
-</script>
-```
+Both attributes are optional. Without `lang`, the locale defaults to `en`; without `data-fallback-lang`, no fallback locale is used. Changing either attribute later updates translations in mounted Vue and Svelte components.
 
 ## 🧑‍💻Usage
 
@@ -93,24 +84,21 @@ Import the Svelte stores and use the `$` prefix in templates. Svelte subscribes 
 </select>
 ```
 
-The `locale` and `fallbackLocale` stores also follow calls to `setLocale` from `laravel-translator`. Import plain translation functions from `laravel-translator` for use outside Svelte templates.
+The `locale` and `fallbackLocale` stores also follow changes to the `html` attributes and calls to `setLocale` from `laravel-translator`. Import plain translation functions from `laravel-translator` for use outside Svelte templates.
 
 #### Vue 3
 
-Register the plugin with a locale string or a writable Vue ref:
+Register the plugin without options to use the `html` attributes:
 
 ```js
-import {createApp, ref} from 'vue'
+import {createApp} from 'vue'
 import App from './App.vue'
 import {LaravelTranslatorVue} from 'laravel-translator/vue'
 
-const locale = ref('en')
-createApp(App).use(LaravelTranslatorVue, {locale, fallbackLocale: 'en'}).mount('#app')
-
-locale.value = 'it' // Updates translations in every component.
+createApp(App).use(LaravelTranslatorVue).mount('#app')
 ```
 
-The plugin provides `__`, `t`, `trans`, `trans_choice`, and `transChoice` to component templates and through Vue injection. Calling `setLocale` from `laravel-translator` also updates rendered translations:
+You can still pass a locale string or writable Vue refs as options when managing locale in Vue. The plugin provides `__`, `t`, `trans`, `trans_choice`, and `transChoice` to component templates and through Vue injection. Changing the `html` attributes or calling `setLocale` from `laravel-translator` updates rendered translations:
 
 ```html
 <template>
