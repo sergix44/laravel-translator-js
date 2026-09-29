@@ -329,8 +329,20 @@ registrations and the `ComponentCustomProperties` type augmentation it installed
 This package uses [Vite](https://vitejs.dev/) Virtual Modules feature to parse your translations files and make them
 available in your frontend code, without the need to export them to a separate file.
 
-In development mode, the translations are parsed and bundled on the fly. When a PHP or JSON translation file changes,
-Vite updates the affected frontend modules while preserving the current application state.
+In development mode, editing a PHP or JSON translation file updates the translations without reloading the page.
+Vue templates using the registered translation helpers refresh automatically. In plain JavaScript, subscribe to
+translation changes and render again when a file changes:
+
+```js
+import {onTranslationsChange, trans} from 'laravel-translator'
+
+const render = () => {
+    document.querySelector('#title').textContent = trans('page.title')
+}
+
+render()
+const stop = onTranslationsChange(render) // Call stop() when the view is removed.
+```
 
 In production mode, the translations are parsed and bundled automatically when you run `npm run build`.
 
