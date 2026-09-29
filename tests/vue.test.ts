@@ -1,159 +1,145 @@
-import {effect, effectScope, nextTick, ref, stop} from 'vue'
-import {toDisplayString} from '@vue/shared'
-import {beforeEach, expect, test} from 'vitest'
-import {getLocale, setLocale as setGlobalLocale, trans} from '../src'
-import {setLocale, useLocale} from '../src/vue'
+import {createRenderer, defineComponent, h, inject, nextTick, ref, type App} from 'vue'
+import {afterEach, beforeEach, expect, test, vi} from 'vitest'
+import {getLocale, setLocale, trans} from '../src'
+import {LaravelTranslatorVue, useTranslation, useTranslationChoice} from '../src/vue'
+
+interface HostNode {
+    type: string
+    text: string
+    children: HostNode[]
+    parent: HostNode | null
+}
+
+const createNode = (type: string, text = ''): HostNode => ({type, text, children: [], parent: null})
+
+const renderer = createRenderer<HostNode, HostNode>({
+    createElement: (type) => createNode(type),
+    createText: (text) => createNode('#text', text),
+    createComment: (text) => createNode('#comment', text),
+    setText: (node, text) => { node.text = text },
+    setElementText: (node, text) => { node.text = text; node.children = [] },
+    patchProp: () => {},
+    insert: (node, parent, anchor) => {
+        if (node.parent) {
+            const oldIndex = node.parent.children.indexOf(node)
+            if (oldIndex !== -1) node.parent.children.splice(oldIndex, 1)
+        }
+        node.parent = parent
+        const index = anchor ? parent.children.indexOf(anchor) : -1
+        if (index === -1) parent.children.push(node)
+        else parent.children.splice(index, 0, node)
+    },
+    remove: (node) => {
+        const index = node.parent?.children.indexOf(node) ?? -1
+        if (index !== -1) node.parent!.children.splice(index, 1)
+        node.parent = null
+    },
+    parentNode: (node) => node.parent,
+    nextSibling: (node) => {
+        const siblings = node.parent?.children ?? []
+        return siblings[siblings.indexOf(node) + 1] ?? null
+    },
+})
+
+const renderedText = (node: HostNode): string =>
+    node.text + node.children.map(renderedText).join('')
 
 beforeEach(() => {
-    setGlobalLocale('en', null)
+    setLocale('en', null)
 })
 
-test('a translation read inside a Vue effect re-runs when the locale changes', () => {
-    let rendered = ''
-    let renders = 0
+afterEach(() => {
+    setLocale('en', null)
+})
 
-    const renderEffect = effect(() => {
-        renders++
-        rendered = String(trans('Welcome!'))
+test('every Vue component updates after setLocale, including injected and direct translator calls', async () => {
+    const renders = {global: 0, composable: 0, direct: 0}
+    const GlobalHelper = defineComponent({
+        render() {
+            renders.global++
+            return h('p', this.__('Welcome!'))
+        },
+    })
+    const Composable = defineComponent({
+        setup() {
+            const title = useTranslation('Welcome!')
+            const count = useTranslationChoice('{1} :count minute ago|[2,*] :count minutes ago', 1)
+            return () => {
+                renders.composable++
+                return h('p', `${title.value} / ${count.value}`)
+            }
+        },
+    })
+    const DirectImport = defineComponent({
+        setup() {
+            const injected = inject<typeof trans>('trans')!
+            return () => {
+                renders.direct++
+                return h('p', `${injected('Welcome!')} / ${trans('Welcome, :name!', {name: 'John'})}`)
+            }
+        },
+    })
+    const Root = defineComponent({
+        render: () => h('div', [h(GlobalHelper), h(Composable), h(DirectImport)]),
     })
 
-    expect(rendered).toBe('Wecome!')
-    expect(renders).toBe(1)
-
-    setGlobalLocale('pt')
-
-    expect(rendered).toBe('Bem-vindo!')
-    expect(renders).toBe(2)
-
-    stop(renderEffect)
-})
-
-test('an unchanged locale does not re-run effects', () => {
-    let renders = 0
-
-    const renderEffect = effect(() => {
-        renders++
-        String(trans('Welcome!'))
-    })
-
-    expect(renders).toBe(1)
-
-    setGlobalLocale('en')
-
-    expect(renders).toBe(1)
-
-    stop(renderEffect)
-})
-
-test('a stopped effect no longer reacts to locale changes', () => {
-    let rendered = ''
-
-    const renderEffect = effect(() => {
-        rendered = String(trans('Welcome!'))
-    })
-
-    stop(renderEffect)
-    setGlobalLocale('pt')
-
-    expect(rendered).toBe('Wecome!')
-})
-
-test("Vue's template renderer prints the translation, not a JSON blob", () => {
-    // This is what `{{ trans('Welcome!') }}` compiles down to. Vue only JSON-stringifies
-    // objects whose toString is Object.prototype.toString, so the handle must pass through.
-    expect(toDisplayString(trans('Welcome!'))).toBe('Wecome!')
-
-    setGlobalLocale('pt')
-
-    expect(toDisplayString(trans('Welcome!'))).toBe('Bem-vindo!')
-})
-
-test('setLocale drives the global locale from a Vue ref', () => {
+    const container = createNode('root')
     const locale = ref('en')
-    const dispose = setLocale(locale)
+    const app = renderer.createApp(Root)
+    app.use(LaravelTranslatorVue, {locale})
+    app.mount(container)
 
-    let rendered = ''
-    const renderEffect = effect(() => {
-        rendered = String(trans('Welcome!'))
-    })
+    try {
+        expect(renderedText(container)).toContain('Wecome!')
+        expect(renderedText(container)).toContain('Welcome, John!')
+        expect(renders).toEqual({global: 1, composable: 1, direct: 1})
 
-    expect(rendered).toBe('Wecome!')
+        setLocale('pt')
+        await nextTick()
 
-    locale.value = 'pt'
+        expect(renderedText(container)).toContain('Bem-vindo!')
+        expect(renderedText(container)).toContain('Bem-vindo, John!')
+        expect(renderedText(container)).not.toContain('Wecome!')
+        expect(renders).toEqual({global: 2, composable: 2, direct: 2})
+        expect(locale.value).toBe('pt')
 
-    expect(rendered).toBe('Bem-vindo!')
+        setLocale('pt')
+        await nextTick()
+        expect(renders).toEqual({global: 2, composable: 2, direct: 2})
 
-    dispose()
-    stop(renderEffect)
+        locale.value = 'en'
+        await nextTick()
+        expect(renderedText(container)).toContain('Wecome!')
+        expect(renderedText(container)).toContain('Welcome, John!')
+        expect(renders).toEqual({global: 3, composable: 3, direct: 3})
+    } finally {
+        app.unmount()
+    }
 })
 
-test('setLocale reflects global locale changes in every bound Vue ref', () => {
-    const first = ref('en')
-    const second = ref('en')
-    const disposeFirst = setLocale(first)
-    const disposeSecond = setLocale(second)
+test('writable locale and fallback refs stay in sync with the global translator', () => {
+    const locale = ref('fr')
+    const fallbackLocale = ref<string | null>('en')
+    let cleanup = () => {}
+    const app = {
+        config: {globalProperties: {}},
+        provide: vi.fn(),
+        onUnmount: (callback: () => void) => { cleanup = callback },
+    } as unknown as App
 
-    first.value = 'pt-BR'
+    LaravelTranslatorVue.install(app, {locale, fallbackLocale})
+    const title = useTranslation('Welcome!')
 
-    expect(getLocale()).toEqual({locale: 'pt_BR', fallbackLocale: null})
-    expect(first.value).toBe('pt_BR')
-    expect(second.value).toBe('pt_BR')
+    expect(title.value).toBe('Wecome!')
+    fallbackLocale.value = 'pt'
+    expect(title.value).toBe('Bem-vindo!')
+    expect(getLocale()).toEqual({locale: 'fr', fallbackLocale: 'pt'})
 
-    setGlobalLocale('en')
-
-    expect(first.value).toBe('en')
-    expect(second.value).toBe('en')
-
-    disposeFirst()
-    disposeSecond()
-})
-
-test('setLocale updates bound locale and fallback refs atomically', () => {
-    const locale = ref('en')
-    const fallback = ref<string | null>(null)
-    const dispose = setLocale(locale, fallback)
-
-    setGlobalLocale('pt-BR', 'fr-FR')
-
+    setLocale('pt-BR', 'en')
     expect(locale.value).toBe('pt_BR')
-    expect(fallback.value).toBe('fr_FR')
-    expect(getLocale()).toEqual({locale: 'pt_BR', fallbackLocale: 'fr_FR'})
+    expect(fallbackLocale.value).toBe('en')
 
-    dispose()
-})
-
-test('setLocale stops both directions of the binding once disposed', () => {
-    const locale = ref('en')
-    const dispose = setLocale(locale)
-
-    dispose()
-    locale.value = 'pt'
-
-    expect(String(trans('Welcome!'))).toBe('Wecome!')
-
-    setGlobalLocale('fr')
-
-    expect(locale.value).toBe('pt')
-})
-
-test('setLocale releases ref bindings with their Vue effect scope', () => {
-    const scope = effectScope()
-    const locale = ref('en')
-
-    scope.run(() => setLocale(locale))
-    scope.stop()
-    setGlobalLocale('pt')
-
-    expect(locale.value).toBe('en')
-})
-
-test('useLocale exposes the active locale as a computed', async () => {
-    const state = useLocale()
-
-    expect(state.value.locale).toBe('en')
-
-    setGlobalLocale('pt-BR', 'en')
-    await nextTick()
-
-    expect(state.value).toEqual({locale: 'pt_BR', fallbackLocale: 'en'})
+    cleanup()
+    locale.value = 'fr'
+    expect(getLocale().locale).toBe('pt_BR')
 })

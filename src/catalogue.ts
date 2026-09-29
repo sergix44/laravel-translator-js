@@ -4,12 +4,24 @@ type TranslationChangeListener = (translations: object) => void
 
 let currentTranslations = translations
 const listeners = new Set<TranslationChangeListener>()
+const readTrackers = new Set<() => void>()
 
 export const getTranslations = () => currentTranslations
 
 export const onTranslationsChange = (listener: TranslationChangeListener) => {
     listeners.add(listener)
     return () => listeners.delete(listener)
+}
+
+export const registerTranslationReadTracker = (tracker: () => void) => {
+    readTrackers.add(tracker)
+    return () => readTrackers.delete(tracker)
+}
+
+export const trackTranslationRead = () => {
+    for (const tracker of readTrackers) {
+        tracker()
+    }
 }
 
 export const setTranslations = (next: object) => {

@@ -1,6 +1,6 @@
 import * as path from 'path'
 import {Plugin} from 'vite'
-import {exportTranslations, invalidateTranslationFile} from './exporter.js'
+import {exportTranslations} from "./exporter";
 
 export interface VitePluginOptionsInterface {
     langPath?: string
@@ -62,7 +62,7 @@ export const onTranslationsUpdate = (listener) => {
     return () => listeners.delete(listener)
 }
 
-if (import.meta.hot) {
+if (import.meta.hot?.data) {
     import.meta.hot.data.listeners = listeners
     import.meta.hot.accept((nextModule) => {
         if (!nextModule) return

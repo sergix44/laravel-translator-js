@@ -15,52 +15,22 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./vite": {
-      "types": "./dist/vite.d.ts",
-      "import": "./dist/vite.js",
-      "require": "./dist/vite.cjs"
-    },
-    "./vue": {
-      "types": "./dist/vue.d.ts",
-      "import": "./dist/vue.js",
-      "require": "./dist/vue.cjs"
-    },
-    "./react": {
-      "types": "./dist/react.d.ts",
-      "import": "./dist/react.js",
-      "require": "./dist/react.cjs"
-    },
-    "./svelte": {
-      "types": "./dist/svelte.d.ts",
-      "import": "./dist/svelte.js",
-      "require": "./dist/svelte.cjs"
-    },
-    "./vanilla": {
-      "types": "./dist/vanilla.d.ts",
-      "import": "./dist/vanilla.js",
-      "require": "./dist/vanilla.cjs"
-    },
-    "./package.json": "./package.json"
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "require": "./dist/*.cjs"
+    }
   },
   "typesVersions": {
     "*": {
-      "index": [
-        "dist/index.d.ts"
-      ],
-      "vite": [
-        "dist/vite.d.ts"
+      "svelte": [
+        "dist/svelte.d.ts"
       ],
       "vue": [
         "dist/vue.d.ts"
       ],
-      "react": [
-        "dist/react.d.ts"
-      ],
-      "svelte": [
-        "dist/svelte.d.ts"
-      ],
-      "vanilla": [
-        "dist/vanilla.d.ts"
+      "vite": [
+        "dist/vite.d.ts"
       ],
       "*": [
         "dist/index.d.ts"
@@ -74,7 +44,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sergix44/laravel-translator-js.git"
+    "url": "https://github.com/sergix44/laravel-translator-js.git"
   },
   "author": "Sergio Brighenti",
   "license": "MIT",
@@ -83,8 +53,12 @@
   },
   "homepage": "https://github.com/sergix44/laravel-translator-js#readme",
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@testing-library/svelte": "^5.4.2",
     "@types/node": "^24.0.0",
     "@vitest/coverage-v8": "^5.0.2",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.57.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vite": "^8.3.1",

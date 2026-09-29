@@ -1,5 +1,5 @@
 <script>
-    export let label
+    let {label} = $props()
 </script>
 
 <span data-testid="child">{label}</span>
