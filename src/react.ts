@@ -43,7 +43,7 @@ const subscribe = (notify: () => void) => {
     }
 }
 
-/** Reactive Laravel translation helpers and locale state; no provider is required. */
+/** Subscribe once per component; returned translation helpers are regular functions, not hooks. */
 export const useTranslator = (): ReactTranslator => {
     const current = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 

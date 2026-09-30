@@ -2,7 +2,8 @@
 import {createRenderer, defineComponent, h, inject, nextTick, ref, type App} from 'vue'
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 import {getLocale, setLocale, trans} from '../src'
-import {LaravelTranslatorVue, useTranslation, useTranslationChoice} from '../src/vue'
+import {getTranslations, setTranslations} from '../src/catalogue'
+import {__, t, trans as vueTrans, trans_choice, transChoice, LaravelTranslatorVue, useTranslation, useTranslationChoice} from '../src/vue'
 
 interface HostNode {
     type: string
@@ -109,8 +110,8 @@ test('every Vue component updates after setLocale, including injected and direct
     })
     const Composable = defineComponent({
         setup() {
-            const title = useTranslation('Welcome!')
-            const count = useTranslationChoice('{1} :count minute ago|[2,*] :count minutes ago', 1)
+            const title = vueTrans('Welcome!')
+            const count = trans_choice('{1} :count minute ago|[2,*] :count minutes ago', 1)
             return () => {
                 renders.composable++
                 return h('p', `${title.value} / ${count.value}`)
@@ -161,6 +162,75 @@ test('every Vue component updates after setLocale, including injected and direct
         expect(renders).toEqual({global: 3, composable: 3, direct: 3})
     } finally {
         app.unmount()
+    }
+})
+
+test('Vue translations follow refs and getters for keys, replacements, counts, and explicit locales', () => {
+    const key = ref('Welcome, :name!')
+    const name = ref('John')
+    const count = ref(1)
+    const replacements = ref({name: 'John'})
+    const explicitLocale = ref<string | undefined>('pt')
+    const greeting = vueTrans(key, () => ({name: name.value}))
+    const minutesKey = '{1} :count minute ago|[2,*] :count minutes ago'
+    const minutes = trans_choice(() => minutesKey, count)
+    const explicitGreeting = vueTrans(() => key.value, replacements, explicitLocale)
+    const explicitMinutes = trans_choice(minutesKey, () => count.value, {}, () => explicitLocale.value)
+
+    expect(greeting.value).toBe('Welcome, John!')
+    expect(minutes.value).toBe('1 minute ago')
+    expect(explicitGreeting.value).toBe('Bem-vindo, John!')
+    expect(explicitMinutes.value).toBe('há 1 minuto')
+
+    name.value = 'Jane'
+    replacements.value = {name: 'Jane'}
+    count.value = 2
+
+    expect(greeting.value).toBe('Welcome, Jane!')
+    expect(minutes.value).toBe('2 minutes ago')
+    expect(explicitGreeting.value).toBe('Bem-vindo, Jane!')
+    expect(explicitMinutes.value).toBe('há 2 minutos')
+
+    setLocale('pt')
+    expect(greeting.value).toBe('Bem-vindo, Jane!')
+    expect(minutes.value).toBe('há 2 minutos')
+
+    explicitLocale.value = 'en'
+    expect(explicitGreeting.value).toBe('Welcome, Jane!')
+    expect(explicitMinutes.value).toBe('2 minutes ago')
+
+    key.value = 'Welcome!'
+    expect(greeting.value).toBe('Bem-vindo!')
+    expect(explicitGreeting.value).toBe('Wecome!')
+
+    explicitLocale.value = undefined
+    expect(explicitGreeting.value).toBe('Bem-vindo!')
+    expect(explicitMinutes.value).toBe('há 2 minutos')
+})
+
+test('Vue named helpers and compatibility aliases follow locale and catalogue changes', () => {
+    const originalTranslations = getTranslations()
+
+    try {
+        setTranslations({
+            en: {json: {Welcome: 'English', Items: '{1} One item|[2,*] :count items'}},
+            pt: {json: {Welcome: 'Portuguese', Items: '{1} Um item|[2,*] :count itens'}},
+        })
+        const titles = [vueTrans, __, t, useTranslation].map((translate) => translate('Welcome'))
+        const counts = [trans_choice, transChoice, useTranslationChoice].map((translate) => translate('Items', 2))
+
+        expect(titles.map((title) => title.value)).toEqual(Array(4).fill('English'))
+        expect(counts.map((count) => count.value)).toEqual(Array(3).fill('2 items'))
+
+        setLocale('pt')
+        expect(titles.map((title) => title.value)).toEqual(Array(4).fill('Portuguese'))
+        expect(counts.map((count) => count.value)).toEqual(Array(3).fill('2 itens'))
+
+        setTranslations({pt: {json: {Welcome: 'Updated', Items: '{1} Single|[2,*] :count updated'}}})
+        expect(titles.map((title) => title.value)).toEqual(Array(4).fill('Updated'))
+        expect(counts.map((count) => count.value)).toEqual(Array(3).fill('2 updated'))
+    } finally {
+        setTranslations(originalTranslations)
     }
 })
 

@@ -1,5 +1,5 @@
-import {computed, isRef, shallowRef, watch, type App, type ComputedRef, type Ref} from 'vue'
-import {getLocale, onLocaleChange, setLocale, trans, trans_choice, type LocaleState} from './index'
+import {computed, isRef, shallowRef, toValue, watch, type App, type ComputedRef, type MaybeRefOrGetter, type Ref} from 'vue'
+import {getLocale, onLocaleChange, setLocale, trans as translate, trans_choice as translateChoice, type LocaleState} from './index'
 import {onTranslationsChange, registerTranslationReadTracker} from './catalogue'
 
 const revision = shallowRef(0)
@@ -19,15 +19,26 @@ export interface VueTranslatorOptions {
     fallbackLocale?: string | null | Ref<string | null>
 }
 
-export const useTranslation = (key: string, replace: object = {}, locale?: string): ComputedRef<string> =>
-    computed(() => trans(key, replace, locale))
+/** A computed translation that follows locale, catalogue, and reactive argument changes. */
+export const trans = (
+    key: MaybeRefOrGetter<string>,
+    replace: MaybeRefOrGetter<object> = {},
+    locale?: MaybeRefOrGetter<string | undefined>,
+): ComputedRef<string> => computed(() => translate(toValue(key), toValue(replace), toValue(locale)))
 
-export const useTranslationChoice = (
-    key: string,
-    number: number,
-    replace: object = {},
-    locale?: string,
-): ComputedRef<string> => computed(() => trans_choice(key, number, replace, locale))
+/** A computed pluralized translation; counts and other arguments may be refs or getters. */
+export const trans_choice = (
+    key: MaybeRefOrGetter<string>,
+    number: MaybeRefOrGetter<number>,
+    replace: MaybeRefOrGetter<object> = {},
+    locale?: MaybeRefOrGetter<string | undefined>,
+): ComputedRef<string> => computed(() => translateChoice(toValue(key), toValue(number), toValue(replace), toValue(locale)))
+
+export const __ = trans
+export const t = trans
+export const transChoice = trans_choice
+export const useTranslation = trans
+export const useTranslationChoice = trans_choice
 
 export const LaravelTranslatorVue = {
     install(app: App, options: VueTranslatorOptions = {}) {
@@ -91,17 +102,17 @@ export const LaravelTranslatorVue = {
             stopLocaleSubscription()
         })
 
-        app.provide('__', trans)
-        app.provide('t', trans)
-        app.provide('trans', trans)
-        app.provide('trans_choice', trans_choice)
-        app.provide('transChoice', trans_choice)
+        app.provide('__', translate)
+        app.provide('t', translate)
+        app.provide('trans', translate)
+        app.provide('trans_choice', translateChoice)
+        app.provide('transChoice', translateChoice)
 
-        app.config.globalProperties.__ = trans
-        app.config.globalProperties.t = trans
-        app.config.globalProperties.trans = trans
-        app.config.globalProperties.trans_choice = trans_choice
-        app.config.globalProperties.transChoice = trans_choice
+        app.config.globalProperties.__ = translate
+        app.config.globalProperties.t = translate
+        app.config.globalProperties.trans = translate
+        app.config.globalProperties.trans_choice = translateChoice
+        app.config.globalProperties.transChoice = translateChoice
 
         return app
     },
@@ -109,10 +120,10 @@ export const LaravelTranslatorVue = {
 
 declare module 'vue' {
     interface ComponentCustomProperties {
-        trans: typeof trans
-        transChoice: typeof trans_choice
-        __: typeof trans
-        t: typeof trans
-        trans_choice: typeof trans_choice
+        trans: typeof translate
+        transChoice: typeof translateChoice
+        __: typeof translate
+        t: typeof translate
+        trans_choice: typeof translateChoice
     }
 }

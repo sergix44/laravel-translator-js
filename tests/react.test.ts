@@ -50,14 +50,14 @@ const MemoizedChild = memo(({translate}: {translate: TranslateFn}) => {
 })
 
 const Translations = () => {
-    const {__, trans_choice, locale, fallbackLocale, setLocale} = useTranslator()
+    const {trans, trans_choice, locale, fallbackLocale, setLocale} = useTranslator()
     return h('div', null,
-        h('h1', {'data-testid': 'title'}, __('Welcome!')),
-        h('p', {'data-testid': 'greeting'}, __('Welcome, :name!', {name: 'John'})),
+        h('h1', {'data-testid': 'title'}, trans('Welcome!')),
+        h('p', {'data-testid': 'greeting'}, trans('Welcome, :name!', {name: 'John'})),
         h('p', {'data-testid': 'minutes'}, trans_choice(minutesKey, 2)),
-        h('p', {'data-testid': 'php'}, __('messages.hello')),
-        h('input', {'data-testid': 'input', placeholder: __('Welcome!')}),
-        h(MemoizedChild, {translate: __}),
+        h('p', {'data-testid': 'php'}, trans('messages.hello')),
+        h('input', {'data-testid': 'input', placeholder: trans('Welcome!')}),
+        h(MemoizedChild, {translate: trans}),
         h('output', {'data-testid': 'state'}, `${locale}|${fallbackLocale ?? ''}`),
         h('select', {
             'data-testid': 'select', value: locale,
@@ -110,6 +110,35 @@ test('setLocale updates text, plurals, attributes, and memoized children', async
     expect(element('input').getAttribute('placeholder')).toBe('Bem-vindo!')
     expect(text('child')).toBe('Bem-vindo!')
     expect((element('select') as HTMLSelectElement).value).toBe('pt')
+})
+
+test('helpers from one React subscription support changing lists and calls outside rendering', async () => {
+    let translate: TranslateFn
+    const List = ({keys}: {keys: string[]}) => {
+        const {trans, trans_choice} = useTranslator()
+        translate = trans
+
+        return h('div', null,
+            h('p', {'data-testid': 'minutes'}, trans_choice(minutesKey, keys.length)),
+            h('ul', {'data-testid': 'list'}, keys.map((key) => h('li', {key}, trans(key)))),
+        )
+    }
+
+    await mount(h(List, {keys: ['Welcome!']}))
+    expect(text('list')).toBe('Wecome!')
+    expect(text('minutes')).toBe('1 minute ago')
+
+    await act(() => root!.render(h(List, {keys: ['Welcome!', 'auth.failed']})))
+    expect(container.querySelectorAll('li')).toHaveLength(2)
+    expect(text('minutes')).toBe('2 minutes ago')
+
+    await act(() => core.setLocale('pt'))
+    expect(text('list')).toBe('Bem-vindo!As credenciais indicadas não coincidem com as registadas no sistema.')
+    expect(text('minutes')).toBe('há 2 minutos')
+    expect(translate!('Welcome, :name!', {name: 'Jane'})).toBe('Bem-vindo, Jane!')
+
+    await act(() => root!.render(h(List, {keys: []})))
+    expect(container.querySelectorAll('li')).toHaveLength(0)
 })
 
 test('catalogue updates refresh PHP and JSON translations without remounting', async () => {

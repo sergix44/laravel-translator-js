@@ -83,12 +83,12 @@ const onTranslationChange: ChangeSubscriber = (notify) => {
 // like {$__('page.title')} in both legacy and runes components.
 const translationStore = <T>(build: () => T): Readable<T> => sharedStore(build, onTranslationChange)
 
-/** Use `{$__('page.title')}` in Svelte templates. */
-export const __: Readable<TranslateFn> = translationStore(() =>
+/** Use `{$trans('page.title')}` in templates or `$derived($trans('page.title'))` in scripts. */
+export const trans: Readable<TranslateFn> = translationStore(() =>
     (key, replace, locale) => translate(key, replace, locale))
 
-export const t: Readable<TranslateFn> = __
-export const trans: Readable<TranslateFn> = __
+export const __: Readable<TranslateFn> = trans
+export const t: Readable<TranslateFn> = trans
 
 /** Use `{$trans_choice('cart.items', count)}` in Svelte templates. */
 export const trans_choice: Readable<TranslateChoiceFn> = translationStore(() =>

@@ -7,6 +7,7 @@ import {getLocale, setLocale} from '../src'
 import {setTranslations} from '../src/catalogue'
 import {__, fallbackLocale, locale, localeState, trans_choice} from '../src/svelte'
 import SvelteTranslations from './components/SvelteTranslations.svelte'
+import SvelteScriptTranslations from './components/SvelteScriptTranslations.svelte'
 
 beforeEach(async () => {
     document.documentElement.removeAttribute('lang')
@@ -84,6 +85,30 @@ test('translation catalogue updates change mounted text without changing locale'
     expect(screen.getByTestId('input').getAttribute('placeholder')).toBe('Updated live')
     expect(screen.getByTestId('child').textContent).toBe('Updated live')
     expect(getLocale().locale).toBe('en')
+})
+
+test('Svelte script translations follow props, locale, and catalogue updates', async () => {
+    const component = render(SvelteScriptTranslations, {name: 'John', count: 1})
+    expect(screen.getByTestId('script-greeting').textContent).toBe('Welcome, John!')
+    expect(screen.getByTestId('script-minutes').textContent).toBe('1 minute ago')
+
+    await component.rerender({name: 'Jane', count: 2})
+    expect(screen.getByTestId('script-greeting').textContent).toBe('Welcome, Jane!')
+    expect(screen.getByTestId('script-minutes').textContent).toBe('2 minutes ago')
+
+    setLocale('pt')
+    await tick()
+    expect(screen.getByTestId('script-greeting').textContent).toBe('Bem-vindo, Jane!')
+    expect(screen.getByTestId('script-minutes').textContent).toBe('há 2 minutos')
+
+    setTranslations({pt: {json: {
+        'Welcome, :name!': 'Hello, :name!',
+        '{1} :count minute ago|[2,*] :count minutes ago': '{1} One updated minute|[2,*] :count updated minutes',
+    }}})
+    await tick()
+    expect(screen.getByTestId('script-greeting').textContent).toBe('Hello, Jane!')
+    expect(screen.getByTestId('script-minutes').textContent).toBe('2 updated minutes')
+    expect(screen.getByTestId('script-input').getAttribute('placeholder')).toBe('Hello, Jane!')
 })
 
 test('the bound locale select writes through to the core locale', async () => {

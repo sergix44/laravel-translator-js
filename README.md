@@ -65,68 +65,7 @@ t('auth.failed') // ...
 trans_choice('user.count', 1) // User
 trans_choice('user.count', 2) // Users
 ```
-
-#### React
-
-For React 18 and 19, import `useTranslator` from `laravel-translator/react`. The hook returns `__`, `t`, `trans`, `trans_choice`, `transChoice`, `locale`, `fallbackLocale`, and `setLocale`. No provider is required.
-
-```jsx
-import {useTranslator} from 'laravel-translator/react'
-
-export default function Cart({count}) {
-    const {__, trans_choice, locale, fallbackLocale, setLocale} = useTranslator()
-
-    return (
-        <>
-            <h1>{__('page.title')}</h1>
-            <p>{trans_choice('cart.items', count)}</p>
-            <select value={locale} onChange={(event) => setLocale(event.target.value, fallbackLocale)}>
-                <option value="en">English</option>
-                <option value="it">Italiano</option>
-            </select>
-        </>
-    )
-}
-```
-
-For individual strings, use `useTranslation(key, replace?, locale?)` or `useTranslationChoice(key, count, replace?, locale?)`:
-
-```jsx
-import {useTranslation, useTranslationChoice} from 'laravel-translator/react'
-
-export default function Greeting({name, count}) {
-    const greeting = useTranslation('user.welcome', {name})
-    const items = useTranslationChoice('cart.items', count)
-
-    return <p>{greeting} / {items}</p>
-}
-```
-
-These hooks update when the `html` locale attributes change, `setLocale` is called, or translation files change during development. Translation helpers also change identity on those updates, so memoized children and values depending on them refresh. Import plain translation functions from `laravel-translator` for use outside React components.
-
-Server rendering is supported; initialize the same locale and fallback locale on the server and client before rendering or hydrating.
-
-#### Svelte
-
-Import the Svelte stores and use the `$` prefix in templates. Svelte subscribes to each store and updates rendered text, attributes, and component props when `setLocale` is called or translation files change during development.
-
-```svelte
-<script>
-    import {__, trans_choice, locale} from 'laravel-translator/svelte'
-</script>
-
-<h1>{$__('page.title')}</h1>
-<p>{$trans_choice('cart.items', 2)}</p>
-
-<select bind:value={$locale}>
-    <option value="en">English</option>
-    <option value="it">Italiano</option>
-</select>
-```
-
-The `locale` and `fallbackLocale` stores also follow changes to the `html` attributes and calls to `setLocale` from `laravel-translator`. Import plain translation functions from `laravel-translator` for use outside Svelte templates.
-
-#### Vue 3
+### Vue
 
 Register the plugin without options to use the `html` attributes:
 
@@ -148,17 +87,108 @@ You can still pass a locale string or writable Vue refs as options when managing
 </template>
 ```
 
-For a translation assigned once in `<script setup>`, use a computed translation so it stays reactive:
+In `<script setup>`, import `trans`, `trans_choice`, or their aliases `__`, `t`, and `transChoice` from `laravel-translator/vue`. These functions return read-only computed refs that follow locale and translation file changes. Vue unwraps them in templates; use `.value` in JavaScript:
 
 ```html
 <script setup>
-import {useTranslation} from 'laravel-translator/vue'
+import {trans, trans_choice} from 'laravel-translator/vue'
 
-const title = useTranslation('page.title')
+const props = defineProps({count: Number})
+const title = trans('page.title')
+const items = trans_choice('cart.items', () => props.count)
 </script>
 
-<template><h1>{{ title }}</h1></template>
+<template>
+    <section>
+        <h1>{{ title }}</h1>
+        <p>{{ items }}</p>
+    </section>
+</template>
 ```
+
+Arguments accept plain values, Vue refs, or getters. Pass a ref or getter for values that may change, such as a count or replacements derived from props. `useTranslation` and `useTranslationChoice` remain available as aliases for `trans` and `trans_choice`.
+
+The plugin's template and injected helpers return strings. Import plain translation functions from `laravel-translator` when a string is needed in JavaScript.
+
+### Svelte
+
+Import the Svelte stores and use the `$` prefix in templates. Svelte subscribes to each store and updates rendered text, attributes, and component props when `setLocale` is called or translation files change during development.
+
+```svelte
+<script>
+    import {trans, trans_choice, locale} from 'laravel-translator/svelte'
+</script>
+
+<h1>{$trans('page.title')}</h1>
+<p>{$trans_choice('cart.items', 2)}</p>
+
+<select bind:value={$locale}>
+    <option value="en">English</option>
+    <option value="it">Italiano</option>
+</select>
+```
+
+For translations assigned in a Svelte 5 script, use `$derived` so they also follow prop changes:
+
+```svelte
+<script>
+    import {trans, trans_choice} from 'laravel-translator/svelte'
+
+    let {count} = $props()
+    const title = $derived($trans('page.title'))
+    const items = $derived($trans_choice('cart.items', count))
+</script>
+
+<h1>{title}</h1>
+<p>{items}</p>
+```
+
+`__` and `t` are aliases for the `trans` store; `transChoice` is an alias for `trans_choice`.
+
+The `locale` and `fallbackLocale` stores also follow changes to the `html` attributes and calls to `setLocale` from `laravel-translator`. Import plain translation functions from `laravel-translator` for use outside Svelte templates.
+
+### React
+
+For React 18 and 19, import `useTranslator` from `laravel-translator/react`. The hook returns `__`, `t`, `trans`, `trans_choice`, `transChoice`, `locale`, `fallbackLocale`, and `setLocale`. No provider is required.
+
+```jsx
+import {useTranslator} from 'laravel-translator/react'
+
+export default function Cart({count}) {
+    const {trans, trans_choice, locale, fallbackLocale, setLocale} = useTranslator()
+
+    return (
+        <>
+            <h1>{trans('page.title')}</h1>
+            <p>{trans_choice('cart.items', count)}</p>
+            <select value={locale} onChange={(event) => setLocale(event.target.value, fallbackLocale)}>
+                <option value="en">English</option>
+                <option value="it">Italiano</option>
+            </select>
+        </>
+    )
+}
+```
+
+Call `useTranslator()` once per component. Its `trans` and `trans_choice` helpers return strings and can be called in JSX, lists, or callbacks. Keeping the subscription in an explicitly named hook follows [React's hook naming conventions](https://react.dev/learn/reusing-logic-with-custom-hooks#hook-names-always-start-with-use).
+
+The existing `useTranslation(key, replace?, locale?)` and `useTranslationChoice(key, count, replace?, locale?)` hooks remain available for individual strings:
+
+```jsx
+import {useTranslation, useTranslationChoice} from 'laravel-translator/react'
+
+export default function Greeting({name, count}) {
+    const greeting = useTranslation('user.welcome', {name})
+    const items = useTranslationChoice('cart.items', count)
+
+    return <p>{greeting} / {items}</p>
+}
+```
+
+These hooks update when the `html` locale attributes change, `setLocale` is called, or translation files change during development. Translation helpers also change identity on those updates, so memoized children and values depending on them refresh. Import plain translation functions from `laravel-translator` for use outside React components.
+
+Server rendering is supported; initialize the same locale and fallback locale on the server and client before rendering or hydrating.
+
 
 ### Advanced usage
 
