@@ -49,7 +49,7 @@ Set the language and fallback language on the `html` element in your `app.blade.
 <html lang="{{ app()->getLocale() }}" data-fallback-lang="{{ config('app.fallback_locale') }}">
 ```
 
-Both attributes are optional. Without `lang`, the locale defaults to `en`; without `data-fallback-lang`, no fallback locale is used. Changing either attribute later updates translations in mounted Vue and Svelte components.
+Both attributes are optional. Without `lang`, the locale defaults to `en`; without `data-fallback-lang`, no fallback locale is used. Changing either attribute later updates translations in mounted React, Vue, and Svelte components.
 
 ## 🧑‍💻Usage
 
@@ -65,6 +65,46 @@ t('auth.failed') // ...
 trans_choice('user.count', 1) // User
 trans_choice('user.count', 2) // Users
 ```
+
+#### React
+
+For React 18 and 19, import `useTranslator` from `laravel-translator/react`. The hook returns `__`, `t`, `trans`, `trans_choice`, `transChoice`, `locale`, `fallbackLocale`, and `setLocale`. No provider is required.
+
+```jsx
+import {useTranslator} from 'laravel-translator/react'
+
+export default function Cart({count}) {
+    const {__, trans_choice, locale, fallbackLocale, setLocale} = useTranslator()
+
+    return (
+        <>
+            <h1>{__('page.title')}</h1>
+            <p>{trans_choice('cart.items', count)}</p>
+            <select value={locale} onChange={(event) => setLocale(event.target.value, fallbackLocale)}>
+                <option value="en">English</option>
+                <option value="it">Italiano</option>
+            </select>
+        </>
+    )
+}
+```
+
+For individual strings, use `useTranslation(key, replace?, locale?)` or `useTranslationChoice(key, count, replace?, locale?)`:
+
+```jsx
+import {useTranslation, useTranslationChoice} from 'laravel-translator/react'
+
+export default function Greeting({name, count}) {
+    const greeting = useTranslation('user.welcome', {name})
+    const items = useTranslationChoice('cart.items', count)
+
+    return <p>{greeting} / {items}</p>
+}
+```
+
+These hooks update when the `html` locale attributes change, `setLocale` is called, or translation files change during development. Translation helpers also change identity on those updates, so memoized children and values depending on them refresh. Import plain translation functions from `laravel-translator` for use outside React components.
+
+Server rendering is supported; initialize the same locale and fallback locale on the server and client before rendering or hydrating.
 
 #### Svelte
 
@@ -154,7 +194,7 @@ This package uses [Vite](https://vitejs.dev/) Virtual Modules feature to parse y
 available in your frontend code, without the need to export them to a separate file.
 
 In development mode, editing a PHP or JSON translation file updates the translations without reloading the page.
-Vue templates using the registered translation helpers refresh automatically. In plain JavaScript, subscribe to
+React and Svelte components using their adapters and Vue templates using the registered translation helpers refresh automatically. In plain JavaScript, subscribe to
 translation changes and render again when a file changes:
 
 ```js

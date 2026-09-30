@@ -1,7 +1,7 @@
 {
   "name": "laravel-translator",
   "type": "module",
-  "version": "3.0.0-rc.1",
+  "version": "3.0.0-rc.2",
   "description": "Laravel localization bridge for your frontend.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -23,6 +23,9 @@
   },
   "typesVersions": {
     "*": {
+      "react": [
+        "dist/react.d.ts"
+      ],
       "svelte": [
         "dist/svelte.d.ts"
       ],
@@ -39,7 +42,7 @@
   },
   "scripts": {
     "tests": "vitest --run",
-    "build": "tsup ./src --external virtual-laravel-translations,vue --format cjs,esm --dts --clean",
+    "build": "tsup ./src --external virtual-laravel-translations,vue,react --format cjs,esm --splitting --dts --clean",
     "prepublishOnly": "npm run build"
   },
   "repository": {
@@ -56,8 +59,12 @@
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@testing-library/svelte": "^5.4.2",
     "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "^5.0.2",
     "jsdom": "^29.1.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "svelte": "^5.57.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
@@ -68,5 +75,13 @@
   "dependencies": {
     "glob": "^13.0.6",
     "php-parser": "^3.7.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   }
 }
