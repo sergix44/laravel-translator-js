@@ -101,3 +101,82 @@ test('trans works with capitalization uppercase', async () => {
 
     expect(r).toBe('The EMAIL must be accepted.')
 })
+
+const lookupTranslations = {
+    en: {
+        php: {messages: {
+            title: 'PHP title',
+            group: {label: 'Nested PHP'},
+            list: ['First', 'Second'],
+            empty: '',
+            stopped: null,
+        }},
+        json: {
+            'messages.title': 'JSON title',
+            'messages.empty': 'JSON after empty PHP',
+            'messages.stopped.child': 'Literal after null PHP',
+            'literal.key': 'Literal JSON',
+            literal: {key: 'Nested JSON'},
+            nested: {key: 'Nested JSON only', stopped: null},
+            'empty.literal': '',
+            empty: {literal: 'Nested value ignored'},
+        },
+    },
+    es: {json: {Welcome: 'Bienvenido', 'empty.literal': 'Fallback value'}},
+    php_only: {php: {messages: {title: 'Only PHP'}}},
+    empty: {},
+    null_locale: null,
+}
+
+test.each([
+    {locale: 'en', key: 'messages.title', expected: 'PHP title'},
+    {locale: 'en', key: 'literal.key', expected: 'Literal JSON'},
+    {locale: 'en', key: 'nested.key', expected: 'Nested JSON only'},
+    {locale: 'en', key: 'messages.group', expected: {label: 'Nested PHP'}},
+    {locale: 'en', key: 'messages.list.1', expected: 'Second'},
+    {locale: 'en', key: 'messages.empty', expected: 'JSON after empty PHP'},
+    {locale: 'en', key: 'messages.stopped.child', expected: 'Literal after null PHP'},
+    {locale: 'en', key: 'empty.literal', expected: ''},
+    {locale: 'es', key: 'Welcome', expected: 'Bienvenido'},
+    {locale: 'php_only', key: 'messages.title', expected: 'Only PHP'},
+])('trans preserves lookup precedence for $locale:$key', ({locale, key, expected}) => {
+    expect(trans(key, {}, null, {
+        locale, fallbackLocale: null, translations: lookupTranslations,
+    })).toEqual(expected)
+})
+
+test.each([
+    {locale: 'en', key: 'messages.unknown.deep'},
+    {locale: 'en', key: 'nested.stopped.child'},
+    {locale: 'es', key: 'missing.deep.key'},
+    {locale: 'php_only', key: 'missing.deep.key'},
+    {locale: 'empty', key: 'missing.deep.key'},
+    {locale: 'null_locale', key: 'missing.deep.key'},
+    {locale: 'absent', key: 'missing.deep.key'},
+])('trans returns the key for missing paths in $locale:$key', ({locale, key}) => {
+    expect(trans(key, {}, null, {
+        locale, fallbackLocale: null, translations: lookupTranslations,
+    })).toBe(key)
+})
+
+test.each([
+    {locale: 'absent', key: 'Welcome', fallbackLocale: 'es', expected: 'Bienvenido'},
+    {locale: 'empty', key: 'messages.group.label', fallbackLocale: 'en', expected: 'Nested PHP'},
+    {locale: 'en', key: 'empty.literal', fallbackLocale: 'es', expected: 'Fallback value'},
+    {locale: 'en', key: 'missing.deep.key', fallbackLocale: 'absent', expected: 'missing.deep.key'},
+])('trans preserves fallback resolution for $locale:$key', ({locale, key, fallbackLocale, expected}) => {
+    expect(trans(key, {}, null, {
+        locale, fallbackLocale, translations: lookupTranslations,
+    })).toBe(expected)
+})
+
+test('an unreadable PHP branch still allows a literal JSON translation', () => {
+    const translations = {en: {
+        php: {get messages() { throw new Error('Unreadable branch') }},
+        json: {'messages.title': 'JSON title'},
+    }}
+
+    expect(trans('messages.title', {}, null, {
+        locale: 'en', fallbackLocale: null, translations,
+    })).toBe('JSON title')
+})

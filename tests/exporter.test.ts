@@ -1,5 +1,8 @@
 import {expect, test} from "vitest";
 import {exportTranslations} from "../src/exporter";
+import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import path from 'node:path'
 
 
 test('exports simple locale', async () => {
@@ -15,6 +18,71 @@ test('exports simple locale', async () => {
             }
         }
     })
+})
+
+test('preserves PHP array shapes and lets later duplicate keys win', () => {
+    const langPath = mkdtempSync(path.join(tmpdir(), 'laravel-translator-arrays-'))
+
+    try {
+        mkdirSync(path.join(langPath, 'en'))
+        writeFileSync(path.join(langPath, 'en', 'messages.php'), `<?php return [
+            'duplicate' => 'Before',
+            'nested' => [
+                'duplicate' => 'Before',
+                'list' => ['One', 'Two'],
+                'numeric' => [0 => 'Zero', 2 => 'Two'],
+                'mixed' => ['named' => 'Named', 'Unnamed'],
+                'empty' => [],
+                'duplicate' => 'After',
+            ],
+            'duplicate' => 'After',
+        ];`)
+
+        expect(exportTranslations(langPath)).toEqual({
+            en: {php: {messages: {
+                duplicate: 'After',
+                nested: {
+                    duplicate: 'After',
+                    list: ['One', 'Two'],
+                    numeric: {0: 'Zero', 2: 'Two'},
+                    mixed: [{named: 'Named'}, 'Unnamed'],
+                    empty: {},
+                },
+            }}},
+        })
+    } finally {
+        rmSync(langPath, {recursive: true, force: true})
+    }
+})
+
+test('later translation paths replace PHP groups and merge JSON keys', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'laravel-translator-precedence-'))
+    const first = path.join(root, 'first')
+    const second = path.join(root, 'second')
+
+    try {
+        for (const langPath of [first, second]) {
+            mkdirSync(path.join(langPath, 'en'), {recursive: true})
+        }
+
+        writeFileSync(path.join(first, 'en', 'messages.php'),
+            '<?php return ["title" => "Before", "first_only" => "Original PHP"];')
+        writeFileSync(path.join(second, 'en', 'messages.php'),
+            '<?php return ["title" => "After"];')
+        writeFileSync(path.join(first, 'en.json'),
+            JSON.stringify({shared: 'Before', first_only: 'Original JSON'}))
+        writeFileSync(path.join(second, 'en.json'),
+            JSON.stringify({shared: 'After', second_only: 'Additional JSON'}))
+
+        expect(exportTranslations(first, second)).toEqual({
+            en: {
+                php: {messages: {title: 'After'}},
+                json: {shared: 'After', first_only: 'Original JSON', second_only: 'Additional JSON'},
+            },
+        })
+    } finally {
+        rmSync(root, {recursive: true, force: true})
+    }
 })
 
 test('exports complex locale', async () => {

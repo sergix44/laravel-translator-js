@@ -106,7 +106,8 @@ const parseExpr = (expr) => {
         let items = expr.items.map((item) => parseExpr(item))
 
         if (expr.items.every((item) => item.key !== null)) {
-            items = items.reduce((acc, val) => Object.assign({}, acc, val), {})
+            // Avoid copying all previous entries for every key.
+            items = items.reduce((acc, val) => Object.assign(acc, val), {})
         }
 
         return items

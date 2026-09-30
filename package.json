@@ -43,6 +43,7 @@
   "scripts": {
     "tests": "vitest --run",
     "build": "tsup ./src --external virtual-laravel-translations,vue,react --format cjs,esm --splitting --dts --clean",
+    "benchmark": "npm run build && node --expose-gc benchmarks/performance.mjs",
     "prepublishOnly": "npm run build"
   },
   "repository": {

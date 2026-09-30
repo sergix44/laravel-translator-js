@@ -214,6 +214,15 @@ a reload, such as `['resources/views/**', 'routes/**']`, and let `laravelTransla
 
 In production mode, the translations are parsed and bundled automatically when you run `npm run build`.
 
+## Development
+
+Run `npm run tests` to check behavior and `npm run benchmark` to build the package and measure translation lookups
+and PHP export scaling. The benchmark creates temporary fixtures and removes them when finished.
+
+Benchmark results report median timings and sampled heap deltas, including retained memory after garbage collection.
+Compare results on the same machine and Node version; these synthetic measurements do not include browser rendering
+or framework overhead, and they do not impose timing thresholds on the test suite.
+
 ## ⚖️ License
 
 The MIT License (MIT). Please see [License File](LICENSE) for more information.
