@@ -87,15 +87,33 @@ You can still pass a locale string or writable Vue refs as options when managing
 </template>
 ```
 
-In `<script setup>`, import `trans`, `trans_choice`, or their aliases `__`, `t`, and `transChoice` from `laravel-translator/vue`. These functions return read-only computed refs that follow locale and translation file changes. Vue unwraps them in templates; use `.value` in JavaScript:
+In `<script setup>`, import `trans`, `trans_choice`, or their aliases `__`, `t`, and `transChoice` from `laravel-translator/vue`. These helpers return strings. Calls in templates, render functions, and `computed()` track locale and translation file changes automatically, including when passing strings to third-party component props:
 
 ```html
 <script setup>
 import {trans, trans_choice} from 'laravel-translator/vue'
 
 const props = defineProps({count: Number})
-const title = trans('page.title')
-const items = trans_choice('cart.items', () => props.count)
+</script>
+
+<template>
+    <section>
+        <h1>{{ trans('page.title') }}</h1>
+        <ThirdPartyButton :label="trans('actions.save')" />
+        <p>{{ trans_choice('cart.items', props.count) }}</p>
+    </section>
+</template>
+```
+
+A string assigned once in setup, such as `const title = trans('page.title')`, is a snapshot. For a stored reactive translation, use `computed(() => trans('page.title'))` or the `use_trans` and `use_trans_choice` composables:
+
+```html
+<script setup>
+import {use_trans, use_trans_choice} from 'laravel-translator/vue'
+
+const props = defineProps({count: Number})
+const title = use_trans('page.title')
+const items = use_trans_choice('cart.items', () => props.count)
 </script>
 
 <template>
@@ -106,9 +124,11 @@ const items = trans_choice('cart.items', () => props.count)
 </template>
 ```
 
-Arguments accept plain values, Vue refs, or getters. Pass a ref or getter for values that may change, such as a count or replacements derived from props. `useTranslation` and `useTranslationChoice` remain available as aliases for `trans` and `trans_choice`.
+`___` is an alias for `use_trans`, so `___('page.title')` also returns a reactive translation. The previous names `useTranslation` and `useTranslationChoice` remain available as aliases.
 
-The plugin's template and injected helpers return strings. Import plain translation functions from `laravel-translator` when a string is needed in JavaScript.
+The composables return read-only computed refs. Vue unwraps them in templates; use `.value` in JavaScript. Their arguments accept plain values, Vue refs, or getters. Pass a ref or getter for values that may change, such as a count or replacements derived from props.
+
+The plugin's template and injected helpers also return strings.
 
 ### Svelte
 
@@ -144,6 +164,23 @@ For translations assigned in a Svelte 5 script, use `$derived` so they also foll
 ```
 
 `__` and `t` are aliases for the `trans` store; `transChoice` is an alias for `trans_choice`.
+
+For an individual reactive string store, use `use_trans(key, replace?, locale?)` or `use_trans_choice(key, count, replace?, locale?)`. `___` aliases `use_trans`:
+
+```svelte
+<script>
+    import {___, use_trans_choice} from 'laravel-translator/svelte'
+
+    let {count} = $props()
+    const title = ___('page.title')
+    const items = $derived(use_trans_choice('cart.items', count))
+</script>
+
+<h1>{$title}</h1>
+<p>{$items}</p>
+```
+
+These stores update on locale and catalogue changes. Arguments are plain values; use `$derived` to recreate the store when props change in Svelte 5 (or a `$:` assignment in legacy components). `$title` and `$items` are strings and can be passed directly to component props.
 
 The `locale` and `fallbackLocale` stores also follow changes to the `html` attributes and calls to `setLocale` from `laravel-translator`. Import plain translation functions from `laravel-translator` for use outside Svelte templates.
 
@@ -184,6 +221,8 @@ export default function Greeting({name, count}) {
     return <p>{greeting} / {items}</p>
 }
 ```
+
+The React adapter also exports `use_trans`, `use_trans_choice`, and `___` as aliases for `useTranslation`, `useTranslationChoice`, and `useTranslation`, respectively. They return strings and follow the same hook rules: call them unconditionally at the top level of a component or custom hook. Prefer the existing camelCase names, or rename these imports to `useTranslation` / `useTranslationChoice`, so React tooling recognizes them as hooks. React's naming convention requires `use` followed by a capital letter.
 
 These hooks update when the `html` locale attributes change, `setLocale` is called, or translation files change during development. Translation helpers also change identity on those updates, so memoized children and values depending on them refresh. Import plain translation functions from `laravel-translator` for use outside React components.
 

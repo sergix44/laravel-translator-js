@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import {createRenderer, defineComponent, h, inject, nextTick, ref, type App} from 'vue'
-import {afterEach, beforeEach, expect, test, vi} from 'vitest'
+import {computed, createRenderer, defineComponent, h, inject, nextTick, ref, type App} from 'vue'
+import {afterEach, beforeEach, expect, expectTypeOf, test, vi} from 'vitest'
 import {getLocale, setLocale, trans} from '../src'
 import {getTranslations, setTranslations} from '../src/catalogue'
-import {__, t, trans as vueTrans, trans_choice, transChoice, LaravelTranslatorVue, useTranslation, useTranslationChoice} from '../src/vue'
+import {__, ___, use_trans, use_trans_choice, t, trans as vueTrans, trans_choice, transChoice, LaravelTranslatorVue, useTranslation, useTranslationChoice} from '../src/vue'
 
 interface HostNode {
     type: string
@@ -110,8 +110,8 @@ test('every Vue component updates after setLocale, including injected and direct
     })
     const Composable = defineComponent({
         setup() {
-            const title = vueTrans('Welcome!')
-            const count = trans_choice('{1} :count minute ago|[2,*] :count minutes ago', 1)
+            const title = useTranslation('Welcome!')
+            const count = useTranslationChoice('{1} :count minute ago|[2,*] :count minutes ago', 1)
             return () => {
                 renders.composable++
                 return h('p', `${title.value} / ${count.value}`)
@@ -171,11 +171,11 @@ test('Vue translations follow refs and getters for keys, replacements, counts, a
     const count = ref(1)
     const replacements = ref({name: 'John'})
     const explicitLocale = ref<string | undefined>('pt')
-    const greeting = vueTrans(key, () => ({name: name.value}))
+    const greeting = use_trans(key, () => ({name: name.value}))
     const minutesKey = '{1} :count minute ago|[2,*] :count minutes ago'
-    const minutes = trans_choice(() => minutesKey, count)
-    const explicitGreeting = vueTrans(() => key.value, replacements, explicitLocale)
-    const explicitMinutes = trans_choice(minutesKey, () => count.value, {}, () => explicitLocale.value)
+    const minutes = use_trans_choice(() => minutesKey, count)
+    const explicitGreeting = ___(() => key.value, replacements, explicitLocale)
+    const explicitMinutes = use_trans_choice(minutesKey, () => count.value, {}, () => explicitLocale.value)
 
     expect(greeting.value).toBe('Welcome, John!')
     expect(minutes.value).toBe('1 minute ago')
@@ -208,7 +208,7 @@ test('Vue translations follow refs and getters for keys, replacements, counts, a
     expect(explicitMinutes.value).toBe('há 2 minutos')
 })
 
-test('Vue named helpers and compatibility aliases follow locale and catalogue changes', () => {
+test('Vue string helpers in computed values and composables follow locale and catalogue changes', () => {
     const originalTranslations = getTranslations()
 
     try {
@@ -216,20 +216,76 @@ test('Vue named helpers and compatibility aliases follow locale and catalogue ch
             en: {json: {Welcome: 'English', Items: '{1} One item|[2,*] :count items'}},
             pt: {json: {Welcome: 'Portuguese', Items: '{1} Um item|[2,*] :count itens'}},
         })
-        const titles = [vueTrans, __, t, useTranslation].map((translate) => translate('Welcome'))
-        const counts = [trans_choice, transChoice, useTranslationChoice].map((translate) => translate('Items', 2))
+        const titles = [vueTrans, __, t].map((translate) => computed(() => {
+            const value = translate('Welcome')
+            expectTypeOf(value).toEqualTypeOf<string>()
+            expect(typeof value).toBe('string')
+            return value
+        }))
+        titles.push(...[use_trans, ___, useTranslation].map((translate) => translate('Welcome')))
+        const counts = [trans_choice, transChoice].map((translate) => computed(() => {
+            const value = translate('Items', 2)
+            expectTypeOf(value).toEqualTypeOf<string>()
+            expect(typeof value).toBe('string')
+            return value
+        }))
+        counts.push(...[use_trans_choice, useTranslationChoice].map((translate) => translate('Items', 2)))
 
-        expect(titles.map((title) => title.value)).toEqual(Array(4).fill('English'))
-        expect(counts.map((count) => count.value)).toEqual(Array(3).fill('2 items'))
+        expect(titles.map((title) => title.value)).toEqual(Array(6).fill('English'))
+        expect(counts.map((count) => count.value)).toEqual(Array(4).fill('2 items'))
 
         setLocale('pt')
-        expect(titles.map((title) => title.value)).toEqual(Array(4).fill('Portuguese'))
-        expect(counts.map((count) => count.value)).toEqual(Array(3).fill('2 itens'))
+        expect(titles.map((title) => title.value)).toEqual(Array(6).fill('Portuguese'))
+        expect(counts.map((count) => count.value)).toEqual(Array(4).fill('2 itens'))
 
         setTranslations({pt: {json: {Welcome: 'Updated', Items: '{1} Single|[2,*] :count updated'}}})
-        expect(titles.map((title) => title.value)).toEqual(Array(4).fill('Updated'))
-        expect(counts.map((count) => count.value)).toEqual(Array(3).fill('2 updated'))
+        expect(titles.map((title) => title.value)).toEqual(Array(6).fill('Updated'))
+        expect(counts.map((count) => count.value)).toEqual(Array(4).fill('2 updated'))
     } finally {
+        setTranslations(originalTranslations)
+    }
+})
+
+test('Vue imported helpers pass strings to component props and update without the plugin', async () => {
+    const originalTranslations = getTranslations()
+    const count = ref(1)
+    const Label = defineComponent({
+        props: {label: {type: String, required: true}},
+        setup: (props) => () => {
+            expect(typeof props.label).toBe('string')
+            return h('span', props.label)
+        },
+    })
+    const Root = defineComponent({
+        setup: () => () => h('div', [
+            ...[vueTrans, __, t].map((translate) => h(Label, {label: translate('Welcome')})),
+            ...[trans_choice, transChoice].map((translate) => h(Label, {label: translate('Items', count.value)})),
+        ]),
+    })
+    const container = createNode('root')
+    const app = renderer.createApp(Root)
+
+    try {
+        setTranslations({
+            en: {json: {Welcome: 'English', Items: '{1} One item|[2,*] :count items'}},
+            pt: {json: {Welcome: 'Portuguese', Items: '{1} Um item|[2,*] :count itens'}},
+        })
+        app.mount(container)
+        expect(renderedText(container)).toBe('English'.repeat(3) + 'One item'.repeat(2))
+
+        count.value = 2
+        await nextTick()
+        expect(renderedText(container)).toBe('English'.repeat(3) + '2 items'.repeat(2))
+
+        setLocale('pt')
+        await nextTick()
+        expect(renderedText(container)).toBe('Portuguese'.repeat(3) + '2 itens'.repeat(2))
+
+        setTranslations({pt: {json: {Welcome: 'Updated', Items: '{1} Single|[2,*] :count updated'}}})
+        await nextTick()
+        expect(renderedText(container)).toBe('Updated'.repeat(3) + '2 updated'.repeat(2))
+    } finally {
+        app.unmount()
         setTranslations(originalTranslations)
     }
 })

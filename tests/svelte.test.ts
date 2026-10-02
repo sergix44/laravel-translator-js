@@ -5,7 +5,7 @@ import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 import initialTranslations from 'virtual-laravel-translations'
 import {getLocale, setLocale} from '../src'
 import {setTranslations} from '../src/catalogue'
-import {__, fallbackLocale, locale, localeState, trans_choice} from '../src/svelte'
+import {__, ___, use_trans, use_trans_choice, fallbackLocale, locale, localeState, trans_choice} from '../src/svelte'
 import SvelteTranslations from './components/SvelteTranslations.svelte'
 import SvelteScriptTranslations from './components/SvelteScriptTranslations.svelte'
 
@@ -90,6 +90,7 @@ test('translation catalogue updates change mounted text without changing locale'
 test('Svelte script translations follow props, locale, and catalogue updates', async () => {
     const component = render(SvelteScriptTranslations, {name: 'John', count: 1})
     expect(screen.getByTestId('script-greeting').textContent).toBe('Welcome, John!')
+    expect(screen.getByTestId('script-title').textContent).toBe('Wecome!')
     expect(screen.getByTestId('script-minutes').textContent).toBe('1 minute ago')
 
     await component.rerender({name: 'Jane', count: 2})
@@ -99,6 +100,7 @@ test('Svelte script translations follow props, locale, and catalogue updates', a
     setLocale('pt')
     await tick()
     expect(screen.getByTestId('script-greeting').textContent).toBe('Bem-vindo, Jane!')
+    expect(screen.getByTestId('script-title').textContent).toBe('Bem-vindo!')
     expect(screen.getByTestId('script-minutes').textContent).toBe('há 2 minutos')
 
     setTranslations({pt: {json: {
@@ -194,4 +196,29 @@ test('choice functions remain callable with an explicit locale', () => {
 
     expect(choice('{1} :count minute ago|[2,*] :count minutes ago', 2, {}, 'pt')).toBe('há 2 minutos')
     stop()
+})
+
+test('individual string stores follow fallback and catalogue changes and unsubscribe cleanly', () => {
+    setTranslations({en: {json: {Title: 'English', Items: '{1} One|[2,*] :count items'}}})
+    setLocale('fr', null)
+    const title = vi.fn()
+    const items = vi.fn()
+    const stopTitle = ___('Title').subscribe(title)
+    const stopItems = use_trans_choice('Items', 2, {}, 'en').subscribe(items)
+    expect(___).toBe(use_trans)
+    expect(title).toHaveBeenLastCalledWith('Title')
+    expect(items).toHaveBeenLastCalledWith('2 items')
+    setLocale('fr', 'en')
+    expect(title).toHaveBeenLastCalledWith('English')
+    setTranslations({en: {json: {Title: 'Updated', Items: '{1} Single|[2,*] :count updated'}}})
+    expect(title).toHaveBeenLastCalledWith('Updated')
+    expect(items).toHaveBeenLastCalledWith('2 updated')
+    stopTitle()
+    stopItems()
+    title.mockClear()
+    items.mockClear()
+    setLocale('en')
+    setTranslations(initialTranslations)
+    expect(title).not.toHaveBeenCalled()
+    expect(items).not.toHaveBeenCalled()
 })

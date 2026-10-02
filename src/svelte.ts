@@ -96,6 +96,20 @@ export const trans_choice: Readable<TranslateChoiceFn> = translationStore(() =>
 
 export const transChoice: Readable<TranslateChoiceFn> = trans_choice
 
+/** A readable translated string that follows locale and catalogue changes. */
+export const use_trans = (key: string, replace: object = {}, locale?: string): Readable<string> =>
+    sharedStore(() => translate(key, replace, locale), onTranslationChange)
+
+/** A readable pluralized string that follows locale and catalogue changes. */
+export const use_trans_choice = (
+    key: string,
+    number: number,
+    replace: object = {},
+    locale?: string,
+): Readable<string> => sharedStore(() => translateChoice(key, number, replace, locale), onTranslationChange)
+
+export const ___ = use_trans
+
 const writableLocaleStore = <T>(read: () => T, write: (value: T) => void): Writable<T> => ({
     ...sharedStore(read, onLocaleChange),
     set: write,

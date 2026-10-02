@@ -6,7 +6,7 @@ import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 import initialTranslations from 'virtual-laravel-translations'
 import * as core from '../src'
 import * as catalogue from '../src/catalogue'
-import {useTranslation, useTranslationChoice, useTranslator, type ReactTranslator, type TranslateFn} from '../src/react'
+import {use_trans as useTrans, use_trans_choice as useTransChoice, ___ as useShortTranslation, useTranslation, useTranslationChoice, useTranslator, type ReactTranslator, type TranslateFn} from '../src/react'
 
 let root: Root | undefined
 let container: HTMLDivElement
@@ -193,9 +193,9 @@ test('fallback changes and disabling fallback update individual translation hook
 
 test('individual hooks follow prop changes and explicit locales without changing the global locale', async () => {
     const Greeting = ({name, count, locale}: {name: string, count: number, locale: string}) => {
-        const greeting = useTranslation('Welcome, :name!', {name}, locale)
-        const minutes = useTranslationChoice(minutesKey, count, {}, locale)
-        const defaultTitle = useTranslation('Welcome!')
+        const greeting = useTrans('Welcome, :name!', {name}, locale)
+        const minutes = useTransChoice(minutesKey, count, {}, locale)
+        const defaultTitle = useShortTranslation('Welcome!')
         return h('p', {'data-testid': 'translation'}, `${greeting}|${minutes}|${defaultTitle}`)
     }
     await mount(h(Greeting, {name: 'John', count: 1, locale: 'pt'}))

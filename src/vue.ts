@@ -19,26 +19,31 @@ export interface VueTranslatorOptions {
     fallbackLocale?: string | null | Ref<string | null>
 }
 
+/** String helpers track locale and catalogue reads inside Vue reactive effects. */
+export const trans = translate
+export const trans_choice = translateChoice
+export const __ = trans
+export const t = trans
+export const transChoice = trans_choice
+
 /** A computed translation that follows locale, catalogue, and reactive argument changes. */
-export const trans = (
+export const use_trans = (
     key: MaybeRefOrGetter<string>,
     replace: MaybeRefOrGetter<object> = {},
     locale?: MaybeRefOrGetter<string | undefined>,
 ): ComputedRef<string> => computed(() => translate(toValue(key), toValue(replace), toValue(locale)))
 
 /** A computed pluralized translation; counts and other arguments may be refs or getters. */
-export const trans_choice = (
+export const use_trans_choice = (
     key: MaybeRefOrGetter<string>,
     number: MaybeRefOrGetter<number>,
     replace: MaybeRefOrGetter<object> = {},
     locale?: MaybeRefOrGetter<string | undefined>,
 ): ComputedRef<string> => computed(() => translateChoice(toValue(key), toValue(number), toValue(replace), toValue(locale)))
 
-export const __ = trans
-export const t = trans
-export const transChoice = trans_choice
-export const useTranslation = trans
-export const useTranslationChoice = trans_choice
+export const ___ = use_trans
+export const useTranslation = use_trans
+export const useTranslationChoice = use_trans_choice
 
 export const LaravelTranslatorVue = {
     install(app: App, options: VueTranslatorOptions = {}) {

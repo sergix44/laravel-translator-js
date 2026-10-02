@@ -78,3 +78,10 @@ export const useTranslationChoice = (
     replace: object = {},
     locale?: string,
 ): string => useTranslator().transChoice(key, number, replace, locale)
+
+/** Compatibility aliases: these are hooks and must follow React's Rules of Hooks.
+ * Prefer the camelCase names so React tooling recognizes hook calls.
+ */
+export const use_trans = useTranslation
+export const use_trans_choice = useTranslationChoice
+export const ___ = use_trans
